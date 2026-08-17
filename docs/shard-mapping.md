@@ -1,7 +1,7 @@
 # folio-insights shard mapping
 
 This document maps the five folio-insights v2.0 shard subtypes to the public
-`folio-propositions` API at `SCHEMA_VERSION` 2. The shard-envelope redesign is
+`folio-propositions` API at `SCHEMA_VERSION` 3. The shard-envelope redesign is
 on hold pending review. Gold annotation cycle 1 (Palsgraf, AI-annotated and
 Damien-delegated) is complete; the evidence statuses below reflect that cycle.
 It promoted `cited-authority proposition`, `hypothetical illustration`, and
@@ -16,16 +16,16 @@ outside those model payloads.
 A `simple_assertion` is a balanced litigation-ledger entry. `asserter` is
 present, `validator` is present with `mode: "ruled"`, and `disposition` is
 `"accepted"`. The example uses the registered `"litigation"` shape and the
-closed taxonomy value `"party proposition of law"`.
+closed taxonomy value `"Legal Proposition"`.
 
 ```json
 {
   "id": "prop-simple-1",
-  "schema_version": 2,
+  "schema_version": 3,
   "start_char": 120,
   "end_char": 184,
   "text": "The limitations period began when the judgment became final.",
-  "proposition_type": "party proposition of law",
+  "proposition_type": "Legal Proposition",
   "is_new_type": false,
   "asserter": {
     "role": "appellant",
@@ -59,11 +59,11 @@ no validator has acted; it is not missing extraction data.
 ```json
 {
   "id": "prop-hypothesis-1",
-  "schema_version": 2,
+  "schema_version": 3,
   "start_char": null,
   "end_char": null,
   "text": null,
-  "proposition_type": "party proposition of fact",
+  "proposition_type": "Factual Statement",
   "is_new_type": false,
   "asserter": {
     "role": "system",
@@ -93,7 +93,7 @@ to the individual identifier of the glossed authority.
 ```json
 {
   "id": "prop-gloss-1",
-  "schema_version": 2,
+  "schema_version": 3,
   "start_char": 900,
   "end_char": 957,
   "text": "The treatise reads Example as limited to final judgments.",
@@ -137,11 +137,11 @@ thread roles and links in the open `document_metadata` mapping.
 ```json
 {
   "document_id": "opinion-example-1",
-  "schema_version": 2,
+  "schema_version": 3,
   "propositions": [
     {
       "id": "utrum-1",
-      "proposition_type": "party proposition of law",
+      "proposition_type": "Legal Proposition",
       "asserter": {"role": "system", "name": "Thread constructor"},
       "validator": null,
       "disposition": "unresolved",
@@ -149,7 +149,7 @@ thread roles and links in the open `document_metadata` mapping.
     },
     {
       "id": "objection-1",
-      "proposition_type": "party proposition of law",
+      "proposition_type": "Legal Proposition",
       "asserter": {"role": "appellant", "name": "Appellant"},
       "validator": null,
       "disposition": "unresolved",
@@ -157,7 +157,7 @@ thread roles and links in the open `document_metadata` mapping.
     },
     {
       "id": "respondeo-1",
-      "proposition_type": "judicial proposition of law",
+      "proposition_type": "Judicial Legal Conclusion",
       "asserter": {"role": "court", "name": "Court of Appeals"},
       "validator": {"role": "court", "name": "Court of Appeals", "mode": "ruled"},
       "disposition": "accepted",
@@ -200,11 +200,11 @@ serialization of the composite itself.
 ```json
 {
   "document_id": "opinion-later-court",
-  "schema_version": 2,
+  "schema_version": 3,
   "propositions": [
     {
       "id": "prop-follows-1",
-      "proposition_type": "judicial proposition of law",
+      "proposition_type": "Judicial Legal Conclusion",
       "asserter": {"role": "court", "individual_id": "court-later"},
       "validator": {"role": "court", "individual_id": "court-later", "mode": "ruled"},
       "disposition": "accepted",
@@ -244,8 +244,8 @@ claiming that one opinion exercised every public surface.
 
 | Public element | Fields or values represented | Status |
 |---|---|---|
-| `SCHEMA_VERSION` | Current value `2`; record and proposition schema stamp | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)` via the persisted gold-record migration |
-| `WORKING_TAXONOMY` | Prior seven types plus `cited-authority proposition`; `hypothetical illustration`; `policy proposition` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; `proposition_type` and `is_new_type` exercised |
+| `SCHEMA_VERSION` | Current value `3`; record and proposition schema stamp | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)` via the persisted gold-record migrations |
+| `WORKING_TAXONOMY` | Label→optional-IRI mapping: four canonical FOLIO labels carry IRIs; six library-local types carry `None` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; `proposition_type` and `is_new_type` exercised |
 | `ActorRole` | Exercised: `court`; `plaintiff`; `appellant`; `party`; `both_parties`; `secondary_source` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)` |
 | `ActorRole` | Deferred: `defendant`; `appellee`; `petitioner`; `respondent`; `system` | `design-only` (no Palsgraf instance) |
 | `AdjudicationMode` | `ruled`; `pro_forma`; `declined` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; all three modes exercised |
@@ -267,7 +267,7 @@ claiming that one opinion exercised every public surface.
 | `PropositionDocumentRecord` | `document_id`; `schema_version`; `propositions`; `document_metadata`; `generator` | `design-only` (interchange not exercised by annotation) |
 | `MIGRATIONS` | Registry keyed by `(version_from, version_to)` | `design-only` |
 | `register_migration` | Consecutive-version migration registration hook | `design-only` |
-| `migrate_record` | Copying, forward-only interchange-record migration hook; no downgrades | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; v1→v2 ran against the persisted cycle-1 gold record |
+| `migrate_record` | Copying, forward-only interchange-record migration hook; no downgrades | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; v1→v2 and v2→v3 ran against the persisted cycle-1 gold record |
 
 The package also exports `Proposition`, `PropositionDocumentRecord`, and the
 supporting types above from `folio_propositions.__all__`; no shard mapping adds

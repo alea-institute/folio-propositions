@@ -2,6 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from folio_propositions import (
+    WORKING_TAXONOMY,
     ActorRef,
     AdjudicatorRef,
     AxiomStatus,
@@ -13,7 +14,7 @@ from folio_propositions import (
 def proposition(**overrides):
     values = {
         "id": "p-1",
-        "proposition_type": "party proposition of law",
+        "proposition_type": "Legal Proposition",
         "asserter": {"role": "party", "name": "Claimant"},
         "validator": {"role": "court", "name": "Court"},
         "disposition": "accepted",
@@ -129,6 +130,30 @@ def test_new_type_tag_is_verbatim_and_closed_taxonomy_is_enforced():
 def test_cycle_1_promoted_types_are_in_working_taxonomy(proposition_type):
     value = proposition(proposition_type=proposition_type)
     assert value.is_new_type is False
+
+
+def test_working_taxonomy_maps_folio_labels_to_iris_and_local_types_to_none():
+    assert WORKING_TAXONOMY["Legal Proposition"] == (
+        "https://folio.openlegalstandard.org/RNICD9MDcFQJJX6nxX11Vt"
+    )
+    assert WORKING_TAXONOMY["Judicial Legal Conclusion"] == (
+        "https://folio.openlegalstandard.org/RKTUVhpkOGaH53JFNJ4X4s"
+    )
+    assert WORKING_TAXONOMY["Factual Statement"] == (
+        "https://folio.openlegalstandard.org/RnKWv1E6U2Ssc5SRsG14NO"
+    )
+    assert WORKING_TAXONOMY["Judicial Finding of Fact"] == (
+        "https://folio.openlegalstandard.org/R7ZrWzdAOf6mXVtcQ49gWat"
+    )
+    assert WORKING_TAXONOMY["policy proposition"] is None
+
+
+def test_pre_folio_label_requires_migration_or_explicit_new_type():
+    with pytest.raises(ValidationError):
+        proposition(proposition_type="party proposition of law")
+    assert proposition(
+        proposition_type="party proposition of law", is_new_type=True
+    ).is_new_type is True
 
 
 def test_rejected_dissenting_type_remains_a_free_text_new_type():

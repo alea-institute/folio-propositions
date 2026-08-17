@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from copy import deepcopy
-from typing import Any, Callable
+from typing import Any
 
 from pydantic import BaseModel, Field
 
-from .models import Proposition, SCHEMA_VERSION, WORKING_TAXONOMY
+from .models import SCHEMA_VERSION, WORKING_TAXONOMY, Proposition
 
 
 class GeneratorInfo(BaseModel):
@@ -25,6 +26,21 @@ class PropositionDocumentRecord(BaseModel):
 
 MigrationStep = Callable[[dict[str, Any]], dict[str, Any]]
 MIGRATIONS: dict[tuple[int, int], MigrationStep] = {}
+
+_V2_WORKING_TAXONOMY = frozenset(
+    {
+        "party proposition of law",
+        "party proposition of fact",
+        "judicial proposition of law",
+        "judicial proposition of fact",
+        "stipulation",
+        "arguendo assumption",
+        "judicial notice",
+        "cited-authority proposition",
+        "hypothetical illustration",
+        "policy proposition",
+    }
+)
 
 
 def register_migration(version_from: int, version_to: int):
@@ -49,11 +65,14 @@ def _migrate_v1_to_v2(data: dict[str, Any]) -> dict[str, Any]:
             "dissenting judicial proposition": "judicial proposition of law",
             "hypothetical party claim": "hypothetical illustration",
         }
-        proposition_type = type_rewrites.get(
-            proposition.get("proposition_type"), proposition.get("proposition_type")
+        stored_type = proposition.get("proposition_type")
+        proposition_type = (
+            type_rewrites.get(stored_type, stored_type)
+            if isinstance(stored_type, str)
+            else stored_type
         )
         proposition["proposition_type"] = proposition_type
-        if proposition_type in WORKING_TAXONOMY:
+        if proposition_type in _V2_WORKING_TAXONOMY:
             proposition["is_new_type"] = False
         elif proposition_type == "definitional proposition":
             proposition["is_new_type"] = True
@@ -71,6 +90,40 @@ def _migrate_v1_to_v2(data: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
+@register_migration(2, 3)
+def _migrate_v2_to_v3(data: dict[str, Any]) -> dict[str, Any]:
+    """Align the four matched proposition types to canonical FOLIO metadata."""
+
+    def migrate_proposition(proposition: dict[str, Any]) -> None:
+        type_rewrites = {
+            "party proposition of law": "Legal Proposition",
+            "party proposition of fact": "Factual Statement",
+            "judicial proposition of law": "Judicial Legal Conclusion",
+            "judicial proposition of fact": "Judicial Finding of Fact",
+        }
+        stored_type = proposition.get("proposition_type")
+        proposition_type = (
+            type_rewrites.get(stored_type, stored_type)
+            if isinstance(stored_type, str)
+            else stored_type
+        )
+        proposition["proposition_type"] = proposition_type
+        if proposition_type in WORKING_TAXONOMY:
+            proposition["is_new_type"] = False
+        proposition["schema_version"] = 3
+
+    propositions = data.get("propositions")
+    if isinstance(propositions, list):
+        for proposition in propositions:
+            if isinstance(proposition, dict):
+                migrate_proposition(proposition)
+    else:
+        migrate_proposition(data)
+
+    data["schema_version"] = 3
+    return data
+
+
 def migrate_record(
     data: dict[str, Any], target_version: int = SCHEMA_VERSION
 ) -> dict[str, Any]:
@@ -79,7 +132,7 @@ def migrate_record(
     migrated = deepcopy(data)
     current_version = migrated.get("schema_version")
     if not isinstance(current_version, int):
-        raise ValueError("record schema_version must be an integer")
+        raise TypeError("record schema_version must be an integer")
     if target_version < current_version:
         raise ValueError("schema downgrades are not supported")
     while current_version < target_version:
