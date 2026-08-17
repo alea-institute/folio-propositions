@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "folio-propositions"
+version = "0.1.0"
+description = "Shared Proposition ledger schema (double-entry asserter/validator model) for folio-enrich and folio-insights"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Damien Riehl" }]
+dependencies = ["pydantic>=2.7,<3.0"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Legal Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Typing :: Typed",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "mypy>=1.10", "ruff>=0.6"]
+
+[project.urls]
+Homepage = "https://github.com/alea-institute/folio-propositions"
+Repository = "https://github.com/alea-institute/folio-propositions"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/folio_propositions"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
