@@ -60,7 +60,7 @@ attribution.
    `Factual Statement`) would give the asserted/adopted pairs one root and give
    our ledger its anchor class. This is a FOLIO *addition* proposal (Phase E
    flywheel material; also belongs in the v2.0 review packet).
-2. **Rename-to-align (library v0.3.0, after Damien confirms):** adopt FOLIO
+2. **Rename-to-align (library v0.3.0, confirmed by Damien 2026-08-17):** adopt FOLIO
    labels + IRIs for the four exact/close matches (e.g. `judicial proposition
    of law` → `Judicial Legal Conclusion` with IRI), keeping our extra types as
    free-typed until FOLIO grows them. Mechanically: `WORKING_TAXONOMY` becomes
@@ -73,4 +73,5 @@ attribution.
    promotions and the dissent-as-attribution call all survive contact with
    FOLIO (dissent modeling is *confirmed* by it). What changes is naming: the
    promoted/seed types should align to FOLIO labels+IRIs where matches exist.
-   Awaiting Damien's confirmation before shipping v0.3.0.
+   Damien confirmed this recommendation as written; v0.3.0 carries the
+   metadata alignment and a v2→v3 migration without changing ledger shape.

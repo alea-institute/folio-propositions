@@ -7,16 +7,16 @@
 ## Exit record
 
 - Record date: 2026-08-17
-- Phase A schema version: 2 (v0.2.0)
+- Phase A schema version: 3 (v0.3.0)
 - Prepared by: Claude Fable 5 (AI, delegated) — pending review by Damien Riehl (annotator-taxonomist)
 - Gold-corpus ladder completed: NO — 1 of ~5–6 opinions (state high court). Remaining rungs: federal appellate, federal district, state intermediate appellate, state trial, plus at least one modern opinion (post-1980) to test genre drift.
 
 ## Post-cycle taxonomy decision
 
-- Decision: **ADOPT WITH REVISIONS** (provisional — AI adjudication under Damien's delegation; flagged for his confirmation)
-- Final working taxonomy: `folio_propositions.WORKING_TAXONOMY` v0.2.0 — the seven seed types plus `cited-authority proposition`, `hypothetical illustration`, `policy proposition`
-- Approved revisions: three type promotions; `dissenting judicial proposition` rejected as a type (modeled via asserter attribution + validator outcome); `hypothetical party claim` merged; `definitional proposition` held as tag
-- Migration shipped: v1→v2 (`folio_propositions.migrate_record`), applied to the persisted cycle-1 gold record
+- Decision: **ADOPT WITH REVISIONS** (confirmed by Damien Riehl on 2026-08-17)
+- Final working taxonomy: `folio_propositions.WORKING_TAXONOMY` v0.3.0 — four matched types use canonical FOLIO labels+IRIs; six unmatched working types remain library-local with `None` IRIs
+- Approved revisions: three cycle-1 type promotions; `dissenting judicial proposition` rejected as a type (modeled via asserter attribution + validator outcome); `hypothetical party claim` merged; `definitional proposition` held as tag; four exact/close FOLIO matches renamed to canonical labels
+- Migrations shipped: v1→v2 cycle adjudication and v2→v3 FOLIO metadata alignment (`folio_propositions.migrate_record`), applied in sequence to persisted records
 - Rationale: grounded in cycle-1 counts (45% of gold spans required new types; 20-span dissent cluster resolves cleanly through existing asserter/validator fields; 2-span definitional cluster below promotion threshold)
 
 ## Unresolved risks

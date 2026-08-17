@@ -2,25 +2,37 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
+from types import MappingProxyType
 
 from pydantic import BaseModel, Field, model_validator
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
-WORKING_TAXONOMY = frozenset(
+# Canonical FOLIO labels carry their ontology IRIs. Library-local working types
+# remain closed taxonomy entries with no IRI until FOLIO grows an exact home.
+WORKING_TAXONOMY: Mapping[str, str | None] = MappingProxyType(
     {
-        "party proposition of law",
-        "party proposition of fact",
-        "judicial proposition of law",
-        "judicial proposition of fact",
-        "stipulation",
-        "arguendo assumption",
-        "judicial notice",
-        "cited-authority proposition",
-        "hypothetical illustration",
-        "policy proposition",
+        "Legal Proposition": (
+            "https://folio.openlegalstandard.org/RNICD9MDcFQJJX6nxX11Vt"
+        ),
+        "Factual Statement": (
+            "https://folio.openlegalstandard.org/RnKWv1E6U2Ssc5SRsG14NO"
+        ),
+        "Judicial Legal Conclusion": (
+            "https://folio.openlegalstandard.org/RKTUVhpkOGaH53JFNJ4X4s"
+        ),
+        "Judicial Finding of Fact": (
+            "https://folio.openlegalstandard.org/R7ZrWzdAOf6mXVtcQ49gWat"
+        ),
+        "stipulation": None,
+        "arguendo assumption": None,
+        "judicial notice": None,
+        "cited-authority proposition": None,
+        "hypothetical illustration": None,
+        "policy proposition": None,
     }
 )
 
@@ -151,9 +163,12 @@ class Proposition(BaseModel):
             value is not None for value in span_fields
         ):
             raise ValueError("start_char, end_char, and text must be supplied together")
-        if self.start_char is not None and self.end_char is not None:
-            if self.end_char < self.start_char:
-                raise ValueError("end_char must not precede start_char")
+        if (
+            self.start_char is not None
+            and self.end_char is not None
+            and self.end_char < self.start_char
+        ):
+            raise ValueError("end_char must not precede start_char")
         if not self.is_new_type and self.proposition_type not in WORKING_TAXONOMY:
             raise ValueError("proposition_type is not in the working taxonomy")
         if self.shape not in SHAPES:
