@@ -23,7 +23,7 @@ from .models import (
     PropositionShape,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "MIGRATIONS",
@@ -45,4 +45,3 @@ __all__ = [
     "migrate_record",
     "register_migration",
 ]
-

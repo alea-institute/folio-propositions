@@ -118,6 +118,28 @@ def test_new_type_tag_is_verbatim_and_closed_taxonomy_is_enforced():
         proposition(proposition_type="experimental mixed question")
 
 
+@pytest.mark.parametrize(
+    "proposition_type",
+    [
+        "cited-authority proposition",
+        "hypothetical illustration",
+        "policy proposition",
+    ],
+)
+def test_cycle_1_promoted_types_are_in_working_taxonomy(proposition_type):
+    value = proposition(proposition_type=proposition_type)
+    assert value.is_new_type is False
+
+
+def test_rejected_dissenting_type_remains_a_free_text_new_type():
+    value = proposition(
+        proposition_type="dissenting judicial proposition", is_new_type=True
+    )
+    assert value.is_new_type is True
+    with pytest.raises(ValidationError):
+        proposition(proposition_type="dissenting judicial proposition")
+
+
 @pytest.mark.parametrize("status", ["promoted", "demoted", "superseded"])
 def test_axiom_lifecycle_states_validate_and_round_trip(status):
     value = proposition(axiom_status=status)
@@ -148,4 +170,3 @@ def test_text_span_is_optional_as_a_complete_group():
         proposition(start_char=2, text="partial")
     with pytest.raises(ValidationError):
         proposition(start_char=9, end_char=2, text="backwards")
-

@@ -7,7 +7,7 @@ from typing import Any, Callable
 
 from pydantic import BaseModel, Field
 
-from .models import Proposition, SCHEMA_VERSION
+from .models import Proposition, SCHEMA_VERSION, WORKING_TAXONOMY
 
 
 class GeneratorInfo(BaseModel):
@@ -42,7 +42,30 @@ def register_migration(version_from: int, version_to: int):
 
 @register_migration(1, 2)
 def _migrate_v1_to_v2(data: dict[str, Any]) -> dict[str, Any]:
-    """Reserved v2 transformation point; currently only advances the stamp."""
+    """Apply cycle-1 taxonomy decisions and advance proposition stamps."""
+
+    def migrate_proposition(proposition: dict[str, Any]) -> None:
+        type_rewrites = {
+            "dissenting judicial proposition": "judicial proposition of law",
+            "hypothetical party claim": "hypothetical illustration",
+        }
+        proposition_type = type_rewrites.get(
+            proposition.get("proposition_type"), proposition.get("proposition_type")
+        )
+        proposition["proposition_type"] = proposition_type
+        if proposition_type in WORKING_TAXONOMY:
+            proposition["is_new_type"] = False
+        elif proposition_type == "definitional proposition":
+            proposition["is_new_type"] = True
+        proposition["schema_version"] = 2
+
+    propositions = data.get("propositions")
+    if isinstance(propositions, list):
+        for proposition in propositions:
+            if isinstance(proposition, dict):
+                migrate_proposition(proposition)
+    else:
+        migrate_proposition(data)
 
     data["schema_version"] = 2
     return data
@@ -70,4 +93,3 @@ def migrate_record(
         migrated = step(migrated)
         current_version = next_version
     return migrated
-

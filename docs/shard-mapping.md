@@ -1,9 +1,11 @@
 # folio-insights shard mapping
 
 This document maps the five folio-insights v2.0 shard subtypes to the public
-`folio-propositions` API at `SCHEMA_VERSION` 1. The shard-envelope redesign is
-on hold pending review. Gold annotation cycle 1 has not run, so every mapping
-and library element below is **design-only**.
+`folio-propositions` API at `SCHEMA_VERSION` 2. The shard-envelope redesign is
+on hold pending review. Gold annotation cycle 1 (Palsgraf, AI-annotated and
+Damien-delegated) is complete; the evidence statuses below reflect that cycle.
+It promoted `cited-authority proposition`, `hypothetical illustration`, and
+`policy proposition` into the working taxonomy.
 
 The examples intentionally contain only fields accepted by `Proposition` or
 `PropositionDocumentRecord`. Application-level relationships are described
@@ -19,7 +21,7 @@ closed taxonomy value `"party proposition of law"`.
 ```json
 {
   "id": "prop-simple-1",
-  "schema_version": 1,
+  "schema_version": 2,
   "start_char": 120,
   "end_char": 184,
   "text": "The limitations period began when the judgment became final.",
@@ -45,9 +47,8 @@ closed taxonomy value `"party proposition of law"`.
 }
 ```
 
-**Status:** `design-only`. It becomes `annotation-tested` when cycle 1 shows
-that an actual accepted assertion can be captured as a balanced row without a
-forced-fit role, type, disposition, or span.
+**Status:** `annotation-tested (cycle 1: Palsgraf, AI-annotated,
+Damien-delegated)` for its core balanced proposition fields.
 
 ## `hypothesis`
 
@@ -58,7 +59,7 @@ no validator has acted; it is not missing extraction data.
 ```json
 {
   "id": "prop-hypothesis-1",
-  "schema_version": 1,
+  "schema_version": 2,
   "start_char": null,
   "end_char": null,
   "text": null,
@@ -79,9 +80,9 @@ no validator has acted; it is not missing extraction data.
 }
 ```
 
-**Status:** `design-only`. It becomes `annotation-tested` when cycle 1 produces
-or reviews a generated hypothesis and the annotator can preserve its open
-state without inventing a validator.
+**Status:** `design-only` (generated `disputatio` hypothesis not exercised).
+Constructed propositions inside case hypotheticals instead map to the promoted
+`hypothetical illustration` type.
 
 ## `gloss`
 
@@ -92,11 +93,11 @@ to the individual identifier of the glossed authority.
 ```json
 {
   "id": "prop-gloss-1",
-  "schema_version": 1,
+  "schema_version": 2,
   "start_char": 900,
   "end_char": 957,
   "text": "The treatise reads Example as limited to final judgments.",
-  "proposition_type": "party proposition of law",
+  "proposition_type": "cited-authority proposition",
   "is_new_type": false,
   "asserter": {
     "role": "secondary_source",
@@ -119,9 +120,10 @@ to the individual identifier of the glossed authority.
 }
 ```
 
-**Status:** `design-only`. It becomes `annotation-tested` when cycle 1 contains
-a gloss and the annotator can distinguish `"interprets"` or `"elaborates"`
-from a generic `"cites"` edge without a forced fit.
+**Status:** `annotation-tested (cycle 1: Palsgraf, AI-annotated,
+Damien-delegated)` for secondary-source attribution and the natural mapping to
+`cited-authority proposition`; hand-added `CitationEdge` semantics remain
+design-only (only tool-attached edges were exercised).
 
 ## `disputed_proposition`
 
@@ -135,7 +137,7 @@ thread roles and links in the open `document_metadata` mapping.
 ```json
 {
   "document_id": "opinion-example-1",
-  "schema_version": 1,
+  "schema_version": 2,
   "propositions": [
     {
       "id": "utrum-1",
@@ -182,6 +184,8 @@ thread roles and links in the open `document_metadata` mapping.
 **Status:** `design-only`. It becomes `annotation-tested` when cycle 1 yields a
 real question/objection/response sequence whose nodes validate independently
 and whose application-level links preserve the annotator's intended stances.
+The promoted `policy proposition` may occur as an individual node, but does not
+by itself exercise the `disputatio` structure.
 
 ## `conflicting_authorities`
 
@@ -196,7 +200,7 @@ serialization of the composite itself.
 ```json
 {
   "document_id": "opinion-later-court",
-  "schema_version": 1,
+  "schema_version": 2,
   "propositions": [
     {
       "id": "prop-follows-1",
@@ -235,30 +239,35 @@ conflating mere disagreement, distinction, or chronology.
 ## Public API completeness and evidence status
 
 Every public export and every public model field is listed below. Enum rows list
-their complete value groups. All are **design-only** until cycle 1 supplies the
-specific observations needed to test them. The table is an inventory, not a
-promise that one opinion will exercise every value.
+their complete value groups. The table records cycle-1 evidence without
+claiming that one opinion exercised every public surface.
 
 | Public element | Fields or values represented | Status |
 |---|---|---|
-| `SCHEMA_VERSION` | Current value `1`; record and proposition schema stamp | `design-only` |
-| `WORKING_TAXONOMY` | `party proposition of law`; `party proposition of fact`; `judicial proposition of law`; `judicial proposition of fact`; `stipulation`; `arguendo assumption`; `judicial notice` | `design-only` |
-| `ActorRole` | `party`; `plaintiff`; `defendant`; `appellant`; `appellee`; `petitioner`; `respondent`; `both_parties`; `court`; `secondary_source`; `system` | `design-only` |
-| `AdjudicationMode` | `ruled`; `pro_forma`; `declined` | `design-only` |
-| `Disposition` | `accepted`; `rejected`; `revised`; `unresolved`; `assumed-arguendo` | `design-only` |
+| `SCHEMA_VERSION` | Current value `2`; record and proposition schema stamp | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)` via the persisted gold-record migration |
+| `WORKING_TAXONOMY` | Prior seven types plus `cited-authority proposition`; `hypothetical illustration`; `policy proposition` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; `proposition_type` and `is_new_type` exercised |
+| `ActorRole` | Exercised: `court`; `plaintiff`; `appellant`; `party`; `both_parties`; `secondary_source` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)` |
+| `ActorRole` | Deferred: `defendant`; `appellee`; `petitioner`; `respondent`; `system` | `design-only` (no Palsgraf instance) |
+| `AdjudicationMode` | `ruled`; `pro_forma`; `declined` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; all three modes exercised |
+| `Disposition` | `accepted`; `rejected`; `revised`; `unresolved`; `assumed-arguendo` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; all five exercised, including explicit `unresolved` |
 | `CitationEdgeType` | `supports`; `distinguishes`; `overrules`; `follows`; `cites_record_evidence`; `interprets`; `elaborates`; `cites` | `design-only` |
 | `AxiomStatus` | `proposition`; `promoted`; `demoted`; `superseded` | `design-only`; expected to remain design-only through Phase A because no Phase A annotation exercise covers the axiom lifecycle |
-| `ActorRef` | `role`; `individual_id`; `name`; `assumed` | `design-only` |
-| `AdjudicatorRef` | `role`; `individual_id`; `name`; `mode` | `design-only` |
-| `CitationEdge` | `edge_type`; `authority_individual_id`; `authority_text` | `design-only` |
+| `ActorRef` | `role`; `individual_id`; `name`; `assumed` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; listed roles and `assumed` exercised |
+| `AdjudicatorRef` | `role`; `individual_id`; `name`; `mode` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; all three modes exercised |
+| `CitationEdge` | `edge_type`; `authority_individual_id`; `authority_text` | `design-only` (only tool-attached edges exercised; hand-added edges deferred) |
 | `PropositionShape` | Dataclass fields `name`; `expected_roles`; `description` | `design-only` |
-| `SHAPES` | `litigation`; `disputatio`, each mapped to a `PropositionShape` | `design-only` |
-| `Proposition` | `id`; `schema_version`; `start_char`; `end_char`; `text`; `proposition_type`; `is_new_type`; `asserter`; `validator`; `disposition`; `citation_edges`; `triple_ids`; `shape`; `axiom_status` | `design-only`; `axiom_status` is expected to remain design-only through Phase A |
-| `GeneratorInfo` | `tool`; `version` | `design-only` |
-| `PropositionDocumentRecord` | `document_id`; `schema_version`; `propositions`; `document_metadata`; `generator` | `design-only` |
+| `SHAPES` | `litigation`; `disputatio`, each mapped to a `PropositionShape` | `design-only` (`litigation` only; `disputatio` deferred) |
+| `Proposition` core | `id`; `start_char`; `end_char`; `text` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)` |
+| `Proposition` assertion/adjudication | `proposition_type`; `is_new_type`; `ActorRef`; validator including first-class `null`; `Disposition` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)` |
+| `Proposition.asserter` judicial-notice null case | first-class `null` asserter | `design-only` (no instance in Palsgraf) |
+| `Proposition.triple_ids` | linked triple identifiers | `design-only` (not exercised in Palsgraf) |
+| `Proposition.shape` | registered ontology selector | `design-only` (`litigation` only; `disputatio` deferred) |
+| `Proposition.axiom_status` | axiom lifecycle state | `design-only` (expected through Phase A) |
+| `GeneratorInfo` | `tool`; `version` | `design-only` (interchange not exercised by annotation) |
+| `PropositionDocumentRecord` | `document_id`; `schema_version`; `propositions`; `document_metadata`; `generator` | `design-only` (interchange not exercised by annotation) |
 | `MIGRATIONS` | Registry keyed by `(version_from, version_to)` | `design-only` |
 | `register_migration` | Consecutive-version migration registration hook | `design-only` |
-| `migrate_record` | Copying, forward-only interchange-record migration hook; no downgrades | `design-only` |
+| `migrate_record` | Copying, forward-only interchange-record migration hook; no downgrades | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; v1→v2 ran against the persisted cycle-1 gold record |
 
 The package also exports `Proposition`, `PropositionDocumentRecord`, and the
 supporting types above from `folio_propositions.__all__`; no shard mapping adds

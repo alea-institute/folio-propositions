@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "folio-propositions"
-version = "0.1.0"
+version = "0.2.0"
 description = "Shared Proposition ledger schema (double-entry asserter/validator model) for folio-enrich and folio-insights"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -33,4 +33,3 @@ packages = ["src/folio_propositions"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-

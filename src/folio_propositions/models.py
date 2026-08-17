@@ -7,7 +7,7 @@ from enum import Enum
 
 from pydantic import BaseModel, Field, model_validator
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 WORKING_TAXONOMY = frozenset(
     {
@@ -18,6 +18,9 @@ WORKING_TAXONOMY = frozenset(
         "stipulation",
         "arguendo assumption",
         "judicial notice",
+        "cited-authority proposition",
+        "hypothetical illustration",
+        "policy proposition",
     }
 )
 
@@ -156,4 +159,3 @@ class Proposition(BaseModel):
         if self.shape not in SHAPES:
             raise ValueError(f"unregistered proposition shape: {self.shape}")
         return self
-
