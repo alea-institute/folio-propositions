@@ -8,7 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from .models import SCHEMA_VERSION, WORKING_TAXONOMY, Proposition
+from .models import SCHEMA_VERSION, Proposition
 
 
 class GeneratorInfo(BaseModel):
@@ -108,7 +108,7 @@ def _migrate_v2_to_v3(data: dict[str, Any]) -> dict[str, Any]:
             else stored_type
         )
         proposition["proposition_type"] = proposition_type
-        if proposition_type in WORKING_TAXONOMY:
+        if stored_type in type_rewrites:
             proposition["is_new_type"] = False
         proposition["schema_version"] = 3
 
@@ -132,7 +132,8 @@ def migrate_record(
     migrated = deepcopy(data)
     current_version = migrated.get("schema_version")
     if not isinstance(current_version, int):
-        raise TypeError("record schema_version must be an integer")
+        # Preserve the v0.2 public error contract for migration callers.
+        raise ValueError("record schema_version must be an integer")  # noqa: TRY004
     if target_version < current_version:
         raise ValueError("schema downgrades are not supported")
     while current_version < target_version:
@@ -145,4 +146,14 @@ def migrate_record(
             ) from error
         migrated = step(migrated)
         current_version = next_version
+    propositions = migrated.get("propositions")
+    if isinstance(propositions, list):
+        for proposition in propositions:
+            if (
+                isinstance(proposition, dict)
+                and proposition.get("schema_version") != target_version
+            ):
+                raise ValueError(
+                    "proposition schema_version must match the record schema_version"
+                )
     return migrated

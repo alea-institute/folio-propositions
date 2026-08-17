@@ -146,6 +146,10 @@ def test_working_taxonomy_maps_folio_labels_to_iris_and_local_types_to_none():
         "https://folio.openlegalstandard.org/R7ZrWzdAOf6mXVtcQ49gWat"
     )
     assert WORKING_TAXONOMY["policy proposition"] is None
+    with pytest.raises(TypeError):
+        WORKING_TAXONOMY["new type"] = None  # type: ignore[index]
+    with pytest.raises(TypeError):
+        del WORKING_TAXONOMY["policy proposition"]  # type: ignore[attr-defined]
 
 
 def test_pre_folio_label_requires_migration_or_explicit_new_type():
