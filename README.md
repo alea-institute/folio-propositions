@@ -22,3 +22,8 @@ open_position = Proposition(
 )
 ```
 
+## Docs
+
+See the [documentation index](docs/README.md) for the folio-insights shard
+mapping, v2.0 ledger rationale, review-disposition template, gold-cycle
+learnings template, and Phase A exit-record template.
