@@ -1,12 +1,12 @@
-# folio-insights v2.0 review disposition — record (DRAFT)
+# folio-insights v2.0 review disposition — record
 
-> **Status: DRAFT for Damien's confirmation.** Every disposition below is an agent recommendation drafted from the packet on 2026-09-27. Nothing here is decided until Damien confirms or changes it; the confirmation lands in the Final confirmation section. The blank template stays at [`review-disposition.md`](review-disposition.md).
+> **Status: CONFIRMED 2026-09-30.** Damien confirmed every disposition below as drafted (cockpit ask `folio-insights-2026-09-30-1309-backlog-review-2026-09-30`, question `confirm-r18`). The agent drafted the recommendations from the packet on 2026-09-27. The identity boundary is frozen; the accepted vocabularies stay revisable between cycles. The blank template stays at [`review-disposition.md`](review-disposition.md).
 
 ## Review record
 
 - Packet version: `folio-propositions` v0.3.0 (schema version 3), git `cb1e6a7`
-- Review date: pending Damien's confirmation (draft prepared 2026-09-27)
-- Record completed by: Claude Opus 5.5 (AI, delegated) — draft only; Damien Riehl (annotator-taxonomist) confirms
+- Review date: 2026-09-30 (draft prepared 2026-09-27)
+- Record completed by: Claude Opus 5.5 (AI, delegated) drafted; Damien Riehl (annotator-taxonomist) confirmed 2026-09-30
 - Attendees: Damien Riehl — reviewer (self-review, per his 2026-08-17 choice to self-review and stay git-pinned)
 - Source packet: [`rationale.md`](rationale.md), [`shard-mapping.md`](shard-mapping.md), [`exit-record-phase-a.md`](exit-record-phase-a.md), [`migration-0.3.0.md`](migration-0.3.0.md), [`cycle-1-palsgraf-learnings.md`](cycle-1-palsgraf-learnings.md)
 
@@ -14,16 +14,16 @@
 
 | Packet element group | Disposition (`accepted` / `revised` / `rejected`) | Revision or rejection detail | Decision owner |
 |---|---|---|---|
-| Identity and reference boundary | `accepted` (recommended) | None. Freeze proposition/document identifiers, document binding, `schema_version` stamps, span mechanics, and reference-container positions, per the rationale's "Adopt into frozen storage now". | Damien Riehl |
-| Proposition ledger fields and null semantics | `accepted` (recommended) | None now. `null` stays data, not absence. The polarity field and per-opinion validator stance stay deferred to more cycle evidence (Damien, 2026-08-17). | Damien Riehl |
+| Identity and reference boundary | `accepted` | None. Freeze proposition/document identifiers, document binding, `schema_version` stamps, span mechanics, and reference-container positions, per the rationale's "Adopt into frozen storage now". | Damien Riehl |
+| Proposition ledger fields and null semantics | `accepted` | None now. `null` stays data, not absence. The polarity field and per-opinion validator stance stay deferred to more cycle evidence (Damien, 2026-08-17). | Damien Riehl |
 | Working proposition taxonomy | `revised` (confirmed 2026-08-17) | Already decided: ADOPT WITH REVISIONS as `WORKING_TAXONOMY` v0.3.0 (three promotions, dissent modeled via asserter + validator, one merge, definitional held as tag, four FOLIO-canonical renames). Stays revisable between ladder cycles. | Damien Riehl |
-| Actor and adjudication vocabularies | `accepted` (recommended) | Accepted as revisable: `ActorRole` and `AdjudicationMode` change only between cycles, with a schema version and migration. | Damien Riehl |
-| Disposition vocabulary | `accepted` (recommended) | Accepted as revisable, same between-cycle rule. | Damien Riehl |
-| Citation-edge vocabulary | `accepted` (recommended) | Accepted as revisable. Unexercised in cycle 1; target it in the next ladder opinions. | Damien Riehl |
-| Shape descriptors and application-level composites | `accepted` (recommended) | The five folio-insights shard subtypes become configurations or composites of the shared model, as marked in `shard-mapping.md`, not a second ontology. | Damien Riehl |
-| Axiom lifecycle status | `accepted` (recommended) | Accepted as design-only; `AxiomStatus` stays on the same `Proposition` identity. Exercise it when folio-insights promotes its first axiom. | Damien Riehl |
-| Interchange record and migration policy | `accepted` (recommended) | None. Versioned revisions with `migrate_record` between cycles, as shipped for v1→v2→v3. | Damien Riehl |
-| Annotation-testing and Phase A evidence plan | `revised` (recommended) | Continue the gold-corpus ladder (4–5 more opinions: federal appellate, federal district, state intermediate appellate, state trial, one post-1980). Before cycle 1 is called human-validated gold, Damien reviews the AI-annotated session or adds a human second opinion. Use designate-before-render for blind segments. | Damien Riehl |
+| Actor and adjudication vocabularies | `accepted` | Accepted as revisable: `ActorRole` and `AdjudicationMode` change only between cycles, with a schema version and migration. | Damien Riehl |
+| Disposition vocabulary | `accepted` | Accepted as revisable, same between-cycle rule. | Damien Riehl |
+| Citation-edge vocabulary | `accepted` | Accepted as revisable. Unexercised in cycle 1; target it in the next ladder opinions. | Damien Riehl |
+| Shape descriptors and application-level composites | `accepted` | The five folio-insights shard subtypes become configurations or composites of the shared model, as marked in `shard-mapping.md`, not a second ontology. | Damien Riehl |
+| Axiom lifecycle status | `accepted` | Accepted as design-only; `AxiomStatus` stays on the same `Proposition` identity. Exercise it when folio-insights promotes its first axiom. | Damien Riehl |
+| Interchange record and migration policy | `accepted` | None. Versioned revisions with `migrate_record` between cycles, as shipped for v1→v2→v3. | Damien Riehl |
+| Annotation-testing and Phase A evidence plan | `revised` | Continue the gold-corpus ladder (4–5 more opinions: federal appellate, federal district, state intermediate appellate, state trial, one post-1980). Before cycle 1 is called human-validated gold, Damien reviews the AI-annotated session or adds a human second opinion. Use designate-before-render for blind segments. | Damien Riehl |
 
 ## Adopted-vocabulary ownership
 
@@ -36,8 +36,8 @@
 
 | Who | What | Recipient | Due date | Completion evidence |
 |---|---|---|---|---|
-| folio-insights agent | Replace the PRD §6–§7 HOLD banner with a pointer to this confirmed record | folio-insights `PRD-v2.0-draft-2.md` | After Damien confirms | Banner commit on folio-insights `master` |
-| folio-insights agent | Plan the shard-envelope migration (U17) sized by the `accepted` / `revised` groups | folio-insights `docs/plans/` | After Damien confirms and gates U17 | A ce-plan doc for U17 |
+| folio-insights agent | Replace the PRD §6–§7 HOLD banner with a pointer to this confirmed record | folio-insights `PRD-v2.0-draft-2.md` | Done 2026-09-30 on the migration branch; reaches `master` with folio-insights PR #2 | Banner commit on folio-insights `master` |
+| folio-insights agent | Plan the shard-envelope migration (U17) sized by the `accepted` / `revised` groups | folio-insights `docs/plans/` | After Damien confirms and gates U17 (confirmed; U17 precedes Phase 13 storage) | A ce-plan doc for U17 |
 | Damien Riehl | Pick the next gold-ladder opinion | folio-enrich gold corpus | Next annotation cycle | Cycle-2 learnings record |
 
 ## Open risks carried forward
@@ -52,7 +52,7 @@
 
 ## Final confirmation
 
-- Overall packet disposition: `revised` (recommended — every group accepted except the taxonomy, already revised, and the evidence plan)
-- Review chair confirmation: pending — Damien Riehl
-- Vocabulary owner confirmation: pending — Damien Riehl
-- Notes: Draft prepared by the folio-insights GSD-to-CE migration (plan U5). Confirmation arrives through the cockpit decision sheet for this record.
+- Overall packet disposition: `revised` — every group accepted except the taxonomy, already revised, and the evidence plan
+- Review chair confirmation: Damien Riehl — confirmed as drafted, 2026-09-30
+- Vocabulary owner confirmation: Damien Riehl — confirmed as drafted, 2026-09-30
+- Notes: Draft prepared by the folio-insights GSD-to-CE migration (plan U5). Confirmed through the cockpit decision sheet `folio-insights-2026-09-30-1309-backlog-review-2026-09-30`. folio-insights keeps a mirror at `docs/reviews/2026-09-30-r18-disposition.md`.
