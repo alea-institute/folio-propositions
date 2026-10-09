@@ -171,7 +171,14 @@ def test_rejected_dissenting_type_remains_a_free_text_new_type():
 
 @pytest.mark.parametrize("status", ["promoted", "demoted", "superseded"])
 def test_axiom_lifecycle_states_validate_and_round_trip(status):
-    value = proposition(axiom_status=status)
+    legacy_entry = {
+        "from_status": "proposition",
+        "to_status": status,
+        "action": "migrate",
+        "actor_did": None,
+        "at": None,
+    }
+    value = proposition(axiom_status=status, axiom_history=[legacy_entry])
     assert value.axiom_status == AxiomStatus(status)
     assert_round_trip(value)
 

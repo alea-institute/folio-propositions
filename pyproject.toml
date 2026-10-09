@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "folio-propositions"
-version = "0.3.0"
+version = "0.4.0"
 description = "Shared Proposition ledger schema (double-entry asserter/validator model) for folio-enrich and folio-insights"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -22,7 +22,8 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "mypy>=1.10", "ruff>=0.6"]
+signing = ["cryptography>=46"]
+dev = ["pytest>=8.0", "mypy>=1.10", "ruff>=0.6", "cryptography>=46"]
 
 [project.urls]
 Homepage = "https://github.com/alea-institute/folio-propositions"

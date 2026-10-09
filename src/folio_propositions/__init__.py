@@ -1,11 +1,34 @@
 """Public API for the folio-propositions schema library."""
 
+from .identity import (
+    CONTENT_IRI_PREFIX,
+    ContentIdentity,
+    content_identity,
+    content_iri,
+    document_source_uri,
+    normalize_source_uri,
+    normalize_span,
+)
 from .interchange import (
     MIGRATIONS,
     GeneratorInfo,
     PropositionDocumentRecord,
     migrate_record,
     register_migration,
+    stamp_content_iris,
+)
+from .lifecycle import (
+    AXIOM_TRANSITIONS,
+    AxiomAction,
+    AxiomSignatureError,
+    AxiomTransition,
+    AxiomTransitionDraft,
+    IllegalAxiomTransition,
+    TransitionSignature,
+    TransitionVerifier,
+    apply_transition,
+    transition_signing_payload,
+    verify_history,
 )
 from .models import (
     SCHEMA_VERSION,
@@ -22,10 +45,13 @@ from .models import (
     Proposition,
     PropositionShape,
 )
+from .signing import DidKeyEd25519Verifier, did_key_from_public_bytes, sign_transition
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
+    "AXIOM_TRANSITIONS",
+    "CONTENT_IRI_PREFIX",
     "MIGRATIONS",
     "SCHEMA_VERSION",
     "SHAPES",
@@ -34,14 +60,34 @@ __all__ = [
     "ActorRole",
     "AdjudicationMode",
     "AdjudicatorRef",
+    "AxiomAction",
+    "AxiomSignatureError",
     "AxiomStatus",
+    "AxiomTransition",
+    "AxiomTransitionDraft",
     "CitationEdge",
     "CitationEdgeType",
+    "ContentIdentity",
+    "DidKeyEd25519Verifier",
     "Disposition",
     "GeneratorInfo",
+    "IllegalAxiomTransition",
     "Proposition",
     "PropositionDocumentRecord",
     "PropositionShape",
+    "TransitionSignature",
+    "TransitionVerifier",
+    "apply_transition",
+    "content_identity",
+    "content_iri",
+    "did_key_from_public_bytes",
+    "document_source_uri",
     "migrate_record",
+    "normalize_source_uri",
+    "normalize_span",
     "register_migration",
+    "sign_transition",
+    "stamp_content_iris",
+    "transition_signing_payload",
+    "verify_history",
 ]

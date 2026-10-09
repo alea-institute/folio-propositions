@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
@@ -9,7 +10,14 @@ from types import MappingProxyType
 
 from pydantic import BaseModel, Field, model_validator
 
-SCHEMA_VERSION = 3
+from .identity import CONTENT_IRI_HEX_LEN, CONTENT_IRI_PREFIX
+from .lifecycle import AxiomAction, AxiomStatus, AxiomTransition
+
+SCHEMA_VERSION = 4
+
+_CONTENT_IRI_PATTERN = re.compile(
+    re.escape(CONTENT_IRI_PREFIX) + "[0-9a-f]{" + str(CONTENT_IRI_HEX_LEN) + "}"
+)
 
 # Canonical FOLIO labels carry their ontology IRIs. Library-local working types
 # remain closed taxonomy entries with no IRI until FOLIO grows an exact home.
@@ -74,13 +82,6 @@ class CitationEdgeType(str, Enum):
     INTERPRETS = "interprets"
     ELABORATES = "elaborates"
     CITES = "cites"
-
-
-class AxiomStatus(str, Enum):
-    PROPOSITION = "proposition"
-    PROMOTED = "promoted"
-    DEMOTED = "demoted"
-    SUPERSEDED = "superseded"
 
 
 class ActorRef(BaseModel):
@@ -155,6 +156,8 @@ class Proposition(BaseModel):
     triple_ids: list[str] = Field(default_factory=list)
     shape: str = "litigation"
     axiom_status: AxiomStatus = AxiomStatus.PROPOSITION
+    content_iri: str | None = None
+    axiom_history: list[AxiomTransition] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_model_contract(self) -> Proposition:
@@ -173,4 +176,31 @@ class Proposition(BaseModel):
             raise ValueError("proposition_type is not in the working taxonomy")
         if self.shape not in SHAPES:
             raise ValueError(f"unregistered proposition shape: {self.shape}")
+        if self.content_iri is not None and not _CONTENT_IRI_PATTERN.fullmatch(
+            self.content_iri
+        ):
+            raise ValueError(
+                f"content_iri must be {CONTENT_IRI_PREFIX} followed by "
+                f"{CONTENT_IRI_HEX_LEN} lowercase hex characters"
+            )
+        self._validate_axiom_history()
         return self
+
+    def _validate_axiom_history(self) -> None:
+        previous = AxiomStatus.PROPOSITION
+        for index, entry in enumerate(self.axiom_history):
+            if entry.from_status != previous:
+                raise ValueError(
+                    f"axiom_history[{index}] starts from {entry.from_status.value}, "
+                    f"expected {previous.value}"
+                )
+            if entry.action is AxiomAction.MIGRATE and index != 0:
+                raise ValueError(
+                    "only the first axiom_history entry may be a migrate entry"
+                )
+            previous = entry.to_status
+        if self.axiom_status != previous:
+            raise ValueError(
+                f"axiom_status {self.axiom_status.value} does not match the "
+                f"axiom_history end state {previous.value}"
+            )
