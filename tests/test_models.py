@@ -172,6 +172,7 @@ def test_rejected_dissenting_type_remains_a_free_text_new_type():
 @pytest.mark.parametrize("status", ["promoted", "demoted", "superseded"])
 def test_axiom_lifecycle_states_validate_and_round_trip(status):
     legacy_entry = {
+        "sequence": 0,
         "from_status": "proposition",
         "to_status": status,
         "action": "migrate",

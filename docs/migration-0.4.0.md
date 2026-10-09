@@ -17,12 +17,20 @@ signed axiom lifecycle, so `axiom_status` changes carry an auditable history.
 - **`PropositionDocumentRecord.source_uri`** (optional). When set, every
   proposition with both `text` and `content_iri` must satisfy
   `content_iri == content_iri(source_uri, text)`. `stamp_content_iris(record)`
-  returns a copy with the IRI computed for every proposition that has text.
+  returns a copy with the IRI computed for every proposition that has
+  non-empty text. It refuses (with `ValueError`) to change an existing
+  `content_iri` on a proposition whose history holds a signed entry.
+- **Empty spans.** The library deliberately rejects spans that normalize to the
+  empty string (`content_identity` raises `ValueError`), whereas folio-insights'
+  `mint_shard_iri` would hash one. `stamp_content_iris` skips such
+  propositions, and a record rejects a `content_iri` on one. Consumers stamp
+  only non-empty text.
 - **Record version check.** A record now rejects propositions whose
   `schema_version` differs from its own.
 - **`Proposition.axiom_history`** (defaults to `[]`). `axiom_status` must equal
-  the last entry's `to_status`, or `proposition` when the history is empty, and
-  entries must chain from `proposition`.
+  the last entry's `to_status`, or `proposition` when the history is empty;
+  entries must chain from `proposition`; each entry's `sequence` must equal its
+  index; and consecutive signed entries must have strictly increasing `at`.
 - **Signed lifecycle** (`folio_propositions.lifecycle`). `AxiomTransition`,
   `AxiomAction`, `AXIOM_TRANSITIONS`, `apply_transition`, `verify_history`,
   `transition_signing_payload`, and the `TransitionVerifier` protocol.
@@ -43,8 +51,12 @@ record = PropositionDocumentRecord.model_validate(migrated)
 
 The v3→v4 step stamps `schema_version: 4` on the record and its propositions,
 adds `axiom_history: []`, and leaves `content_iri` absent: a v3 record has no
-source URI to compute it from. Bare proposition dictionaries migrate the same
-way, and v1→v4 chains through the frozen historical steps.
+source URI to compute it from. An `axiom_history` already present is kept, and
+entries lacking a `sequence` get their index. Bare proposition dictionaries
+migrate the same way, and v1→v4 chains through the frozen historical steps.
+
+Migration is forward-only (`migrate_record` refuses downgrades). Rolling stored
+data back to v3 requires keeping the v3 originals.
 
 ### The legacy `migrate` entry
 
@@ -54,6 +66,7 @@ consistent with the status:
 
 ```json
 {
+  "sequence": 0,
   "from_status": "proposition",
   "to_status": "promoted",
   "action": "migrate",
@@ -64,9 +77,12 @@ consistent with the status:
 }
 ```
 
-`migrate` entries are unsigned, may only be the first history entry, are
-skipped by `verify_history`, and are refused by `apply_transition`. Treat them
-as "status asserted before signing existed", not as a verified decision.
+`migrate` entries are unsigned, may only be the first history entry, and are
+refused by `apply_transition`. Nobody can verify them, so `verify_history`
+raises `AxiomSignatureError` ("unverified legacy status") on one by default.
+Pass `verify_history(proposition, verifier, allow_legacy_migrate=True)` only
+when you deliberately trust your migrated v3 data. Treat a `migrate` entry as
+"status asserted before signing existed", not as a verified decision.
 
 ## Applying a signed transition
 
@@ -81,6 +97,7 @@ from folio_propositions import (
 )
 
 draft = AxiomTransitionDraft(
+    sequence=len(proposition.axiom_history),  # next history index
     from_status="proposition",
     to_status="promoted",
     action="promote",
@@ -95,10 +112,22 @@ promoted = apply_transition(proposition, transition, DidKeyEd25519Verifier())
 ```
 
 `apply_transition` returns a new proposition; the input is unchanged. It raises
-`IllegalAxiomTransition` for a transition not in the table or not starting
-from the current status, and `AxiomSignatureError` when the signature does not
-verify. The signature covers the proposition id and content IRI, so it cannot
-be replayed onto another proposition.
+`IllegalAxiomTransition` for a transition not in the table, not starting from
+the current status, not carrying the next `sequence`, or not strictly later
+than the last signed entry. It raises `AxiomSignatureError` when the
+proposition has no `content_iri` or the signature does not verify.
+
+The signature binds `proposition_id`, `content_iri` and `sequence` (plus the
+transition's own fields). A signed transition therefore requires a stamped
+content IRI (`sign_transition` raises `ValueError` without one). The binding
+also stops an old entry from being re-appended to roll a status back, and
+stops a signature from being replayed onto another proposition or span. Stamp
+`content_iri` before signing: re-stamping a signed proposition to a different
+IRI is refused.
+
+`did:key` is self-certifying: a verified signature proves only that the key
+named by `actor_did` signed. Consumers must check `actor_did` against their own
+set of authorized signers before trusting a promotion.
 
 ## Consumer guidance
 

@@ -188,7 +188,13 @@ class Proposition(BaseModel):
 
     def _validate_axiom_history(self) -> None:
         previous = AxiomStatus.PROPOSITION
+        previous_at = None
         for index, entry in enumerate(self.axiom_history):
+            if entry.sequence != index:
+                raise ValueError(
+                    f"axiom_history[{index}] has sequence {entry.sequence}, "
+                    f"expected {index}"
+                )
             if entry.from_status != previous:
                 raise ValueError(
                     f"axiom_history[{index}] starts from {entry.from_status.value}, "
@@ -198,6 +204,17 @@ class Proposition(BaseModel):
                 raise ValueError(
                     "only the first axiom_history entry may be a migrate entry"
                 )
+            if entry.action is not AxiomAction.MIGRATE:
+                if (
+                    previous_at is not None
+                    and entry.at is not None
+                    and (entry.at <= previous_at)
+                ):
+                    raise ValueError(
+                        f"axiom_history[{index}] is not strictly later than the "
+                        "previous signed entry"
+                    )
+                previous_at = entry.at
             previous = entry.to_status
         if self.axiom_status != previous:
             raise ValueError(

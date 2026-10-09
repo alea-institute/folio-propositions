@@ -293,6 +293,7 @@ def test_v3_to_v4_migration_adds_history_and_legacy_migrate_entry():
     assert "content_iri" not in first
     assert second["axiom_history"] == [
         {
+            "sequence": 0,
             "from_status": "proposition",
             "to_status": "promoted",
             "action": "migrate",
@@ -342,3 +343,106 @@ def test_v1_record_with_axiom_status_chains_to_v4():
     assert proposition["proposition_type"] == "Judicial Legal Conclusion"
     assert proposition["axiom_history"][0]["to_status"] == "demoted"
     assert PropositionDocumentRecord.model_validate(migrated).schema_version == 4
+
+
+def test_stamp_refuses_to_change_iri_bound_by_signed_history():
+    from datetime import UTC, datetime
+
+    old_iri = content_iri("https://example.com/old", "text")
+    entry = {
+        "sequence": 0,
+        "from_status": "proposition",
+        "to_status": "promoted",
+        "action": "promote",
+        "actor_did": "did:key:z6MkExample",
+        "at": datetime(2026, 10, 9, tzinfo=UTC),
+        "signature": {
+            "algorithm": "ed25519",
+            "key_id": "did:key:z6MkExample#k",
+            "value": "AA",
+        },
+    }
+    signed_prop = spanned(
+        "p-signed",
+        "text",
+        content_iri=old_iri,
+        axiom_status="promoted",
+        axiom_history=[entry],
+    )
+    record = PropositionDocumentRecord(document_id="doc", propositions=[signed_prop])
+    record = record.model_copy(update={"source_uri": SOURCE_URI})
+    with pytest.raises(ValueError, match="p-signed"):
+        stamp_content_iris(record)
+
+    # Same IRI is fine, and an unsigned proposition may be re-stamped freely.
+    same = record.model_copy(update={"source_uri": "https://example.com/old"})
+    assert stamp_content_iris(same).propositions[0].content_iri == old_iri
+    unsigned = record.model_copy(
+        update={"propositions": [spanned("p-free", "text", content_iri=old_iri)]}
+    )
+    assert stamp_content_iris(unsigned).propositions[0].content_iri == content_iri(
+        SOURCE_URI, "text"
+    )
+
+
+@pytest.mark.parametrize("text", ["", "   ", " \r\n\t "])
+def test_stamp_skips_empty_text_and_record_rejects_iri_on_empty_text(text):
+    record = PropositionDocumentRecord(
+        document_id="doc",
+        source_uri=SOURCE_URI,
+        propositions=[spanned("p-empty", text), spanned("p-full", "text")],
+    )
+    stamped = stamp_content_iris(record)
+    assert stamped.propositions[0].content_iri is None
+    assert stamped.propositions[1].content_iri == content_iri(SOURCE_URI, "text")
+
+    iri = content_iri(SOURCE_URI, "text")
+    with pytest.raises(ValidationError, match="p-empty"):
+        PropositionDocumentRecord(
+            document_id="doc",
+            source_uri=SOURCE_URI,
+            propositions=[spanned("p-empty", text, content_iri=iri)],
+        )
+
+
+def test_v3_to_v4_migration_with_null_axiom_status_invents_no_history():
+    stored = {
+        **legacy_proposition("Legal Proposition", False),
+        "schema_version": 3,
+        "axiom_status": None,
+    }
+
+    migrated = migrate_record(stored)
+
+    assert migrated["axiom_history"] == []
+    assert migrated["axiom_status"] is None  # left for model validation to judge
+    with pytest.raises(ValidationError):
+        Proposition.model_validate(migrated)
+
+
+def test_v3_to_v4_migration_preserves_existing_history_and_numbers_it():
+    existing = [
+        {
+            "from_status": "proposition",
+            "to_status": "promoted",
+            "action": "migrate",
+            "actor_did": None,
+            "at": None,
+            "reason": "already recorded",
+            "signature": None,
+        }
+    ]
+    stored = {
+        **legacy_proposition("Legal Proposition", False),
+        "schema_version": 3,
+        "axiom_status": "promoted",
+        "axiom_history": existing,
+    }
+
+    migrated = migrate_record(stored)
+
+    assert migrated["axiom_history"] == [{**existing[0], "sequence": 0}]
+    assert "sequence" not in stored["axiom_history"][0]
+    assert Proposition.model_validate(migrated).axiom_history[0].reason == (
+        "already recorded"
+    )

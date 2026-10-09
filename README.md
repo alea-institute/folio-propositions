@@ -44,7 +44,10 @@ URI when a document has none.
 `axiom_status` changes only through `apply_transition`, which checks the legal
 transition table (`proposition → promoted ⇄ demoted`, any of them →
 `superseded`, which is terminal) and verifies the actor's signature. Every
-change is appended to `axiom_history`. Install
+change is appended to `axiom_history` with its sequence number, and the
+signature binds the proposition id, its stamped `content_iri` and that sequence.
+A `did:key` signature is self-certifying, so check `actor_did` against your own
+authorized signers. Install
 `folio-propositions[signing]` for the `did:key` Ed25519 verifier and the
 `sign_transition` helper. See the [v0.4.0 migration notes](docs/migration-0.4.0.md).
 

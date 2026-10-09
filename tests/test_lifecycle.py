@@ -68,6 +68,7 @@ def draft(from_status, to_status, action=None, signer=None, **overrides):
         action or AXIOM_TRANSITIONS[(AxiomStatus(from_status), AxiomStatus(to_status))]
     )
     values = {
+        "sequence": 0,
         "from_status": from_status,
         "to_status": to_status,
         "action": action,
@@ -80,6 +81,9 @@ def draft(from_status, to_status, action=None, signer=None, **overrides):
 
 
 def signed(value: Proposition, from_status, to_status, signer, **overrides):
+    position = len(value.axiom_history)
+    overrides.setdefault("sequence", position)
+    overrides.setdefault("at", AT + timedelta(minutes=position))
     return sign_transition(
         value.id,
         value.content_iri,
@@ -163,6 +167,7 @@ def test_every_illegal_pair_raises(from_status, to_status, signer):
         draft(from_status, to_status, action=AxiomAction.PROMOTE, signer=signer)
     # A forged object that skipped validation is still refused by apply_transition.
     forged = AxiomTransition.model_construct(
+        sequence=len(start.axiom_history),
         from_status=from_status,
         to_status=to_status,
         action=AxiomAction.PROMOTE,
@@ -199,6 +204,7 @@ def test_ae2_signed_promotion_applies_and_superseded_cannot_be_promoted(signer):
 
     superseded = advance(promoted, AxiomStatus.SUPERSEDED, signer)
     forged = AxiomTransition.model_construct(
+        sequence=len(superseded.axiom_history),
         from_status=AxiomStatus.SUPERSEDED,
         to_status=AxiomStatus.PROMOTED,
         action=AxiomAction.PROMOTE,
@@ -289,6 +295,7 @@ def test_malformed_signature_value_or_actor_did_is_rejected(signer):
 def test_migrate_entries_are_rejected_by_apply_transition():
     value = proposition()
     migrate = AxiomTransition(
+        sequence=0,
         from_status="proposition",
         to_status="promoted",
         action="migrate",
@@ -302,6 +309,7 @@ def test_migrate_entries_are_rejected_by_apply_transition():
 def test_migrate_entries_must_be_unsigned():
     with pytest.raises(ValidationError):
         AxiomTransition(
+            sequence=0,
             from_status="proposition",
             to_status="promoted",
             action="migrate",
@@ -313,6 +321,7 @@ def test_migrate_entries_must_be_unsigned():
 
 def test_signed_transitions_require_actor_time_signature_and_aware_time():
     base = {
+        "sequence": 0,
         "from_status": "proposition",
         "to_status": "promoted",
         "action": "promote",
@@ -345,17 +354,21 @@ def test_signing_payload_is_canonical_utc_json(signer):
         at=datetime(2026, 10, 9, 7, 0, tzinfo=eastern),
         reason="café",
     )
-    payload = transition_signing_payload("p-1", None, transition)
+    iri = "urn:folio:shard/0123456789abcdef0123456789abcdef"
+    payload = transition_signing_payload("p-1", iri, transition)
     assert payload == (
         '{"action":"promote","actor_did":"' + signer.did + '",'
-        '"at":"2026-10-09T12:00:00Z","content_iri":null,"from_status":"proposition",'
-        '"proposition_id":"p-1","reason":"café","schema_version":4,'
-        '"to_status":"promoted"}'
+        '"at":"2026-10-09T12:00:00Z","content_iri":"' + iri + '",'
+        '"from_status":"proposition","proposition_id":"p-1","reason":"café",'
+        '"schema_version":4,"sequence":0,"to_status":"promoted"}'
     ).encode("utf-8")
+    with pytest.raises(ValueError, match="content_iri"):
+        transition_signing_payload("p-1", None, transition)
 
 
 def test_history_chain_validation():
     entry = {
+        "sequence": 0,
         "from_status": "proposition",
         "to_status": "promoted",
         "action": "migrate",
@@ -382,7 +395,12 @@ def test_history_chain_validation():
             axiom_status="superseded",
             axiom_history=[
                 entry,
-                {**entry, "from_status": "promoted", "to_status": "superseded"},
+                {
+                    **entry,
+                    "sequence": 1,
+                    "from_status": "promoted",
+                    "to_status": "superseded",
+                },
             ],
         )
 
@@ -403,7 +421,7 @@ def test_broken_chain_between_signed_entries_is_rejected(signer):
         )
 
 
-def test_verify_history_detects_tampering_and_skips_migrate(signer):
+def test_verify_history_detects_tampering_and_gates_migrate(signer):
     value = reach(AxiomStatus.DEMOTED, signer)
     verify_history(value, VERIFIER)
     history = list(value.axiom_history)
@@ -416,6 +434,7 @@ def test_verify_history_detects_tampering_and_skips_migrate(signer):
         axiom_status="promoted",
         axiom_history=[
             {
+                "sequence": 0,
                 "from_status": "proposition",
                 "to_status": "promoted",
                 "action": "migrate",
@@ -424,9 +443,14 @@ def test_verify_history_detects_tampering_and_skips_migrate(signer):
             }
         ],
     )
-    verify_history(legacy, VERIFIER)
+    with pytest.raises(AxiomSignatureError, match="unverified legacy status"):
+        verify_history(legacy, VERIFIER)
+    verify_history(legacy, VERIFIER, allow_legacy_migrate=True)
     after = advance(legacy, AxiomStatus.DEMOTED, signer)
-    verify_history(after, VERIFIER)
+    assert after.axiom_history[1].sequence == 1
+    with pytest.raises(AxiomSignatureError, match="unverified legacy status"):
+        verify_history(after, VERIFIER)
+    verify_history(after, VERIFIER, allow_legacy_migrate=True)
 
 
 def test_base58btc_known_vectors_and_round_trip():
@@ -451,3 +475,99 @@ def test_did_key_round_trip_and_ed25519_prefix(signer):
         did_key_from_public_bytes(b"short")
     with pytest.raises(ValueError):
         public_bytes_from_did_key("did:web:example.com")
+
+
+def test_replaying_an_old_signed_demote_is_rejected(signer):
+    value = reach(AxiomStatus.DEMOTED, signer)
+    repromoted = advance(value, AxiomStatus.PROMOTED, signer)
+    old_demote = repromoted.axiom_history[1]
+    assert [entry.sequence for entry in repromoted.axiom_history] == [0, 1, 2]
+
+    with pytest.raises(IllegalAxiomTransition, match="sequence"):
+        apply_transition(repromoted, old_demote, VERIFIER)
+    # Bumping the sequence breaks the signature (and the stale time is refused).
+    bumped = old_demote.model_copy(update={"sequence": 3})
+    with pytest.raises(IllegalAxiomTransition, match="strictly later"):
+        apply_transition(repromoted, bumped, VERIFIER)
+    later = old_demote.model_copy(update={"sequence": 3, "at": AT + timedelta(days=1)})
+    with pytest.raises(AxiomSignatureError):
+        apply_transition(repromoted, later, VERIFIER)
+    # Hand-appending the replayed entry to stored data fails model validation.
+    with pytest.raises(ValidationError):
+        Proposition.model_validate(
+            {
+                **repromoted.model_dump(),
+                "axiom_status": "demoted",
+                "axiom_history": [
+                    *repromoted.model_dump()["axiom_history"],
+                    old_demote.model_dump(),
+                ],
+            }
+        )
+
+
+def test_signing_payload_binds_sequence(signer):
+    iri = content_iri("https://example.com/doc", "span")
+    first = draft("proposition", "promoted", signer=signer, sequence=0)
+    second = draft("proposition", "promoted", signer=signer, sequence=1)
+    assert transition_signing_payload("p", iri, first) != transition_signing_payload(
+        "p", iri, second
+    )
+
+
+def test_history_requires_index_sequence_and_increasing_signed_times(signer):
+    value = reach(AxiomStatus.DEMOTED, signer)
+    dumped = value.model_dump()
+    wrong_sequence = [dict(entry) for entry in dumped["axiom_history"]]
+    wrong_sequence[1]["sequence"] = 5
+    with pytest.raises(ValidationError, match="sequence"):
+        Proposition.model_validate({**dumped, "axiom_history": wrong_sequence})
+    same_time = [dict(entry) for entry in dumped["axiom_history"]]
+    same_time[1]["at"] = same_time[0]["at"]
+    with pytest.raises(ValidationError, match="strictly later"):
+        Proposition.model_validate({**dumped, "axiom_history": same_time})
+
+
+def test_apply_transition_refuses_non_increasing_time(signer):
+    promoted = reach(AxiomStatus.PROMOTED, signer)
+    stale = signed(promoted, "promoted", "demoted", signer, at=AT)
+    with pytest.raises(IllegalAxiomTransition, match="strictly later"):
+        apply_transition(promoted, stale, VERIFIER)
+
+
+def test_signed_lifecycle_requires_stamped_content_iri(signer):
+    unstamped = proposition(content_iri=None)
+    with pytest.raises(ValueError, match="content_iri"):
+        sign_transition(
+            unstamped.id,
+            None,
+            draft("proposition", "promoted", signer=signer),
+            signer.key,
+            signer.key_id,
+        )
+    # A transition signed for the stamped twin cannot be applied unstamped.
+    transition = signed(proposition(), "proposition", "promoted", signer)
+    with pytest.raises(AxiomSignatureError, match="content_iri"):
+        apply_transition(unstamped, transition, VERIFIER)
+    promoted = reach(AxiomStatus.PROMOTED, signer)
+    stripped = promoted.model_copy(update={"content_iri": None})
+    with pytest.raises(AxiomSignatureError, match="content_iri"):
+        verify_history(stripped, VERIFIER)
+
+
+def test_overlong_did_key_and_key_id_are_rejected_before_decoding(signer):
+    with pytest.raises(ValueError, match="exceeds"):
+        base58btc_decode("2" * 129)
+    with pytest.raises(ValueError, match="too long"):
+        public_bytes_from_did_key("did:key:z" + "2" * 10_000)
+    value = proposition()
+    transition = signed(value, "proposition", "promoted", signer)
+    payload = transition_signing_payload(value.id, value.content_iri, transition)
+    long_did = "did:key:z" + "2" * 10_000
+    long_signature = transition.signature.model_copy(update={"key_id": long_did + "#k"})
+    assert VERIFIER.verify(payload, long_signature, long_did) is False
+    long_fragment = transition.signature.model_copy(
+        update={"key_id": signer.did + "#" + "z" * 10_000}
+    )
+    assert VERIFIER.verify(payload, long_fragment, signer.did) is False
+    assert VERIFIER.verify(payload, transition.signature, signer.did) is True

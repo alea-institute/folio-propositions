@@ -7,9 +7,20 @@ supersession are recorded as an append-only history of
 ``Proposition.axiom_status``; it checks the transition table and verifies the
 signature through a caller-supplied :class:`TransitionVerifier`.
 
+Each entry carries its 0-based ``sequence`` (its history index), and the
+signature covers the proposition id, its stamped content IRI, and that
+sequence. An old signed entry therefore cannot be re-appended to roll a status
+back, nor replayed onto another proposition or span. A signed transition
+requires a stamped ``content_iri``.
+
+``did:key`` identities are self-certifying: a valid signature proves only that
+the holder of that key signed. Consumers must check ``actor_did`` against their
+own set of authorized signers.
+
 The ``migrate`` action is reserved for schema migrations that must record a
 pre-v4 status for which no signed transition exists. It is never accepted by
-:func:`apply_transition` and carries no signature.
+:func:`apply_transition` and carries no signature, so :func:`verify_history`
+rejects it unless the caller opts in with ``allow_legacy_migrate=True``.
 """
 
 from __future__ import annotations
@@ -21,7 +32,7 @@ from enum import Enum
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 if TYPE_CHECKING:
     from .models import Proposition
@@ -94,6 +105,7 @@ def _check_legal(
 
 
 class _TransitionBody(BaseModel):
+    sequence: int = Field(ge=0)
     from_status: AxiomStatus
     to_status: AxiomStatus
     action: AxiomAction
@@ -153,15 +165,24 @@ def transition_signing_payload(
 
     The payload is ``json.dumps(..., sort_keys=True, separators=(",", ":"),
     ensure_ascii=False)`` encoded as UTF-8 over the proposition id, content
-    IRI, from/to status, action, actor DID, UTC timestamp (ISO-8601 with
-    ``Z``), reason, and ``schema_version`` 4. The signature itself is
-    excluded. For these value types (strings, ``null``, and one small
-    integer) this output equals RFC 8785 JSON Canonicalization Scheme output.
+    IRI, sequence, from/to status, action, actor DID, UTC timestamp (ISO-8601
+    with ``Z``), reason, and ``schema_version`` 4. The signature itself is
+    excluded. For these value types (strings, ``null``, and small
+    non-negative integers) this output equals RFC 8785 JCS output.
+
+    Raises ``ValueError`` when ``content_iri`` is ``None``: a signed
+    lifecycle transition requires a stamped content IRI.
     """
 
+    if content_iri is None:
+        raise ValueError(
+            f"proposition {proposition_id} has no content_iri; a signed "
+            "lifecycle transition requires a stamped content IRI"
+        )
     obj: dict[str, Any] = {
         "proposition_id": proposition_id,
         "content_iri": content_iri,
+        "sequence": transition.sequence,
         "from_status": transition.from_status.value,
         "to_status": transition.to_status.value,
         "action": transition.action.value,
@@ -189,6 +210,11 @@ def _verify_entry(
 ) -> None:
     if transition.signature is None or transition.actor_did is None:
         raise AxiomSignatureError("transition is not signed")
+    if content_iri is None:
+        raise AxiomSignatureError(
+            f"proposition {proposition_id} has no content_iri; a signed "
+            "lifecycle transition requires a stamped content IRI"
+        )
     payload = transition_signing_payload(proposition_id, content_iri, transition)
     if not verifier.verify(payload, transition.signature, transition.actor_did):
         raise AxiomSignatureError(
@@ -204,9 +230,12 @@ def apply_transition(
     """Return a new proposition with ``transition`` appended and applied.
 
     Raises :class:`IllegalAxiomTransition` when the transition does not start
-    from the proposition's current status, uses ``migrate``, or is not in
-    :data:`AXIOM_TRANSITIONS`; raises :class:`AxiomSignatureError` when the
-    signature is missing or does not verify. The input is never modified.
+    from the proposition's current status, uses ``migrate``, is not in
+    :data:`AXIOM_TRANSITIONS`, does not carry the next ``sequence``
+    (``len(axiom_history)``), or is not strictly later than the last signed
+    entry; raises :class:`AxiomSignatureError` when the proposition has no
+    ``content_iri`` or the signature is missing or does not verify. The input
+    is never modified.
     """
 
     if transition.action is AxiomAction.MIGRATE:
@@ -221,6 +250,17 @@ def apply_transition(
     )
     if problem is not None:
         raise IllegalAxiomTransition(problem)
+    expected_sequence = len(proposition.axiom_history)
+    if transition.sequence != expected_sequence:
+        raise IllegalAxiomTransition(
+            f"transition sequence {transition.sequence} is not the next history "
+            f"index {expected_sequence} of proposition {proposition.id}"
+        )
+    last_at = _last_signed_at(proposition.axiom_history)
+    if last_at is not None and transition.at is not None and transition.at <= last_at:
+        raise IllegalAxiomTransition(
+            "transition time must be strictly later than the last signed entry"
+        )
     _verify_entry(proposition.id, proposition.content_iri, transition, verifier)
     return proposition.model_copy(
         update={
@@ -230,10 +270,35 @@ def apply_transition(
     )
 
 
-def verify_history(proposition: Proposition, verifier: TransitionVerifier) -> None:
-    """Re-verify every signed entry of ``proposition.axiom_history``."""
+def _last_signed_at(history: list[AxiomTransition]) -> datetime | None:
+    """Return the timestamp of the last signed (non-migrate) entry, if any."""
+
+    for entry in reversed(history):
+        if entry.action is not AxiomAction.MIGRATE:
+            return entry.at
+    return None
+
+
+def verify_history(
+    proposition: Proposition,
+    verifier: TransitionVerifier,
+    *,
+    allow_legacy_migrate: bool = False,
+) -> None:
+    """Re-verify every entry of ``proposition.axiom_history``.
+
+    A ``migrate`` entry is an unsigned, pre-v4 status claim that nobody can
+    verify. By default it raises :class:`AxiomSignatureError` ("unverified
+    legacy status"); pass ``allow_legacy_migrate=True`` to skip such entries
+    when the caller deliberately trusts its migrated v3 data.
+    """
 
     for transition in proposition.axiom_history:
         if transition.action is AxiomAction.MIGRATE:
-            continue
+            if allow_legacy_migrate:
+                continue
+            raise AxiomSignatureError(
+                f"unverified legacy status on proposition {proposition.id}: "
+                "migrate entries carry no signature"
+            )
         _verify_entry(proposition.id, proposition.content_iri, transition, verifier)

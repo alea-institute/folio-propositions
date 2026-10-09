@@ -175,3 +175,27 @@ def test_document_source_uri_is_deterministic_over_canonical_text():
     assert document_source_uri("Different text") != expected
     with pytest.raises(ValueError):
         document_source_uri("   ")
+
+
+def test_core_import_works_without_cryptography():
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    src = Path(__file__).resolve().parents[1] / "src"
+    code = (
+        "import sys\n"
+        f"sys.path.insert(0, {str(src)!r})\n"
+        "sys.modules['cryptography'] = None\n"
+        "import folio_propositions as f\n"
+        "assert all(hasattr(f, name) for name in f.__all__)\n"
+        "print('ok', f.__version__)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-I", "-c", code],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "ok 0.4.0"

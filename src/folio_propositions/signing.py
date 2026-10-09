@@ -25,6 +25,10 @@ _B58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 _B58_INDEX = {char: index for index, char in enumerate(_B58_ALPHABET)}
 _ED25519_MULTICODEC = b"\xed\x01"
 _DID_KEY_PREFIX = "did:key:z"
+# An Ed25519 did:key multibase body is 48 characters; anything far longer is
+# rejected before decoding so hostile input cannot force big-integer work.
+MAX_MULTIBASE_LENGTH = 128
+_MAX_SIGNATURE_LENGTH = 128
 
 
 def base58btc_encode(data: bytes) -> str:
@@ -39,9 +43,14 @@ def base58btc_encode(data: bytes) -> str:
     return "1" * leading_zeros + encoded
 
 
-def base58btc_decode(text: str) -> bytes:
-    """Decode Bitcoin-alphabet base58; raises ``ValueError`` on bad input."""
+def base58btc_decode(text: str, max_length: int = MAX_MULTIBASE_LENGTH) -> bytes:
+    """Decode Bitcoin-alphabet base58; raises ``ValueError`` on bad input.
 
+    Input longer than ``max_length`` characters is rejected before decoding.
+    """
+
+    if len(text) > max_length:
+        raise ValueError(f"base58 input exceeds {max_length} characters")
     number = 0
     for char in text:
         if char not in _B58_INDEX:
@@ -74,6 +83,8 @@ def public_bytes_from_did_key(did: str) -> bytes:
 
     if not did.startswith(_DID_KEY_PREFIX):
         raise ValueError("not a base58btc did:key")
+    if len(did) - len(_DID_KEY_PREFIX) > MAX_MULTIBASE_LENGTH:
+        raise ValueError("did:key multibase part is too long")
     decoded = base58btc_decode(did[len(_DID_KEY_PREFIX) :])
     if not decoded.startswith(_ED25519_MULTICODEC) or len(decoded) != 34:
         raise ValueError("did:key does not encode an Ed25519 public key")
@@ -81,7 +92,12 @@ def public_bytes_from_did_key(did: str) -> bytes:
 
 
 class DidKeyEd25519Verifier:
-    """Verify Ed25519 transition signatures whose actor is a ``did:key``."""
+    """Verify Ed25519 transition signatures whose actor is a ``did:key``.
+
+    ``did:key`` is self-certifying: this proves only that the key encoded in
+    ``actor_did`` signed the payload. Callers must separately check
+    ``actor_did`` against their own set of authorized signers.
+    """
 
     def verify(
         self, payload: bytes, signature: TransitionSignature, actor_did: str
@@ -94,6 +110,11 @@ class DidKeyEd25519Verifier:
         if signature.algorithm != "ed25519":
             return False
         if not signature.key_id.startswith(actor_did + "#"):
+            return False
+        fragment = signature.key_id[len(actor_did) + 1 :]
+        if len(fragment) > MAX_MULTIBASE_LENGTH:
+            return False
+        if len(signature.value) > _MAX_SIGNATURE_LENGTH:
             return False
         try:
             public_key = Ed25519PublicKey.from_public_bytes(
@@ -116,7 +137,11 @@ def sign_transition(
     private_key: Ed25519PrivateKey,
     key_id: str,
 ) -> AxiomTransition:
-    """Sign a draft transition and return the signed :class:`AxiomTransition`."""
+    """Sign a draft transition and return the signed :class:`AxiomTransition`.
+
+    Raises ``ValueError`` when ``content_iri`` is ``None``: stamp the
+    proposition's content IRI before signing any lifecycle transition.
+    """
 
     payload = transition_signing_payload(
         proposition_id, content_iri, transition_without_signature

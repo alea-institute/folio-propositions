@@ -283,7 +283,7 @@ claiming that one opinion exercised every public surface.
 | `Proposition.triple_ids` | linked triple identifiers | `design-only` (not exercised in Palsgraf) |
 | `Proposition.shape` | registered ontology selector | `design-only` (`litigation` only; `disputatio` deferred) |
 | `Proposition.axiom_status` | axiom lifecycle state | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
-| `Proposition.axiom_history` | ordered `AxiomTransition` entries that must chain from `proposition` to `axiom_status` | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
+| `Proposition.axiom_history` | ordered `AxiomTransition` entries that must chain from `proposition` to `axiom_status`, with `sequence` equal to the index and strictly increasing signed `at` | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
 | `Proposition.content_iri` | optional `urn:folio:shard/` + 32 lowercase hex content IRI | `implemented (v0.4.0; cross-product matching pending)` |
 | `GeneratorInfo` | `tool`; `version` | `design-only` (interchange not exercised by annotation) |
 | `PropositionDocumentRecord` | `document_id`; `schema_version`; `propositions`; `document_metadata`; `generator`; `source_uri` (checks each `content_iri` against `content_iri(source_uri, text)`) | `design-only` (interchange not exercised by annotation) |
@@ -292,10 +292,10 @@ claiming that one opinion exercised every public surface.
 | `normalize_source_uri`; `normalize_span`; `document_source_uri` | Recipe normalizers; deterministic `urn:sha256:` URI for a document without a caller URI | `implemented (v0.4.0)` |
 | `AxiomAction` | `promote`; `demote`; `supersede`; `migrate` (migration-only) | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
 | `AXIOM_TRANSITIONS` | Read-only legal `(from, to)` → action table; `superseded` terminal | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
-| `AxiomTransition`; `AxiomTransitionDraft`; `TransitionSignature` | `from_status`; `to_status`; `action`; `actor_did`; `at`; `reason`; `signature` (`algorithm`; `key_id`; `value`) | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
-| `apply_transition`; `verify_history`; `transition_signing_payload` | Checked, signature-verified status change; history re-verification; canonical JSON signing payload | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
+| `AxiomTransition`; `AxiomTransitionDraft`; `TransitionSignature` | `sequence`; `from_status`; `to_status`; `action`; `actor_did`; `at`; `reason`; `signature` (`algorithm`; `key_id`; `value`) | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
+| `apply_transition`; `verify_history`; `transition_signing_payload` | Checked, signature-verified status change (requires a stamped `content_iri`); history re-verification (`migrate` entries rejected unless `allow_legacy_migrate=True`); canonical JSON payload binding `proposition_id`, `content_iri` and `sequence` | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
 | `TransitionVerifier`; `IllegalAxiomTransition`; `AxiomSignatureError` | Verifier protocol and lifecycle errors | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
-| `DidKeyEd25519Verifier`; `sign_transition`; `did_key_from_public_bytes` | Optional `did:key` Ed25519 signing (`signing` extra) | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
+| `DidKeyEd25519Verifier`; `sign_transition`; `did_key_from_public_bytes` | Optional `did:key` Ed25519 signing (`signing` extra); self-certifying, so consumers must check `actor_did` against their authorized signers | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
 | `MIGRATIONS` | Registry keyed by `(version_from, version_to)` | `design-only` |
 | `register_migration` | Consecutive-version migration registration hook | `design-only` |
 | `migrate_record` | Copying, forward-only interchange-record migration hook; no downgrades | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; v1→v2 and v2→v3 ran against the persisted cycle-1 gold record; v3→v4 unit-tested only |

@@ -8,7 +8,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
-from .identity import content_iri
+from .identity import content_iri, normalize_span
+from .lifecycle import AxiomAction
 from .models import SCHEMA_VERSION, Proposition
 
 
@@ -38,6 +39,11 @@ class PropositionDocumentRecord(BaseModel):
             for proposition in self.propositions:
                 if proposition.text is None or proposition.content_iri is None:
                     continue
+                if not normalize_span(proposition.text):
+                    raise ValueError(
+                        f"proposition {proposition.id} has a content_iri but its "
+                        "text is empty after normalization"
+                    )
                 expected = content_iri(self.source_uri, proposition.text)
                 if proposition.content_iri != expected:
                     raise ValueError(
@@ -51,19 +57,39 @@ def stamp_content_iris(record: PropositionDocumentRecord) -> PropositionDocument
     """Return a copy with ``content_iri`` computed for every proposition with text.
 
     Requires ``record.source_uri``; the input record is not modified.
+    Propositions without text, or whose text is empty after normalization, are
+    left unchanged: the library deliberately refuses to mint an identity for an
+    empty span (folio-insights' ``mint_shard_iri`` would hash one), so consumers
+    stamp only non-empty text.
+
+    Raises ``ValueError`` naming the proposition when stamping would change an
+    existing ``content_iri`` on a proposition whose history holds a signed
+    entry, because those signatures are bound to the old IRI.
     """
 
     source_uri = record.source_uri
     if source_uri is None:
         raise ValueError("stamp_content_iris requires record.source_uri")
-    propositions = [
-        proposition.model_copy(
-            update={"content_iri": content_iri(source_uri, proposition.text)}
+    propositions = []
+    for proposition in record.propositions:
+        if proposition.text is None or not normalize_span(proposition.text):
+            propositions.append(proposition.model_copy())
+            continue
+        iri = content_iri(source_uri, proposition.text)
+        signed = any(
+            entry.action is not AxiomAction.MIGRATE
+            for entry in proposition.axiom_history
         )
-        if proposition.text is not None
-        else proposition.model_copy()
-        for proposition in record.propositions
-    ]
+        if (
+            signed
+            and proposition.content_iri is not None
+            and proposition.content_iri != iri
+        ):
+            raise ValueError(
+                f"proposition {proposition.id} has signed axiom transitions bound "
+                "to its existing content_iri; refusing to change it"
+            )
+        propositions.append(proposition.model_copy(update={"content_iri": iri}))
     return record.model_copy(update={"propositions": propositions})
 
 
@@ -178,6 +204,7 @@ def _migrate_v3_to_v4(data: dict[str, Any]) -> dict[str, Any]:
             if status is not None and status != "proposition":
                 history = [
                     {
+                        "sequence": 0,
                         "from_status": "proposition",
                         "to_status": status,
                         "action": "migrate",
@@ -189,6 +216,11 @@ def _migrate_v3_to_v4(data: dict[str, Any]) -> dict[str, Any]:
                 ]
             else:
                 history = []
+        else:
+            history = list(history)
+            for index, entry in enumerate(history):
+                if isinstance(entry, dict) and "sequence" not in entry:
+                    entry["sequence"] = index
         proposition["axiom_history"] = history
         proposition["schema_version"] = 4
 
