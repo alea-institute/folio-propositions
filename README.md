@@ -1,5 +1,7 @@
 # folio-propositions
 
+[![CI](https://github.com/alea-institute/folio-propositions/actions/workflows/ci.yml/badge.svg)](https://github.com/alea-institute/folio-propositions/actions/workflows/ci.yml)
+
 `folio-propositions` defines the shared, typed Proposition ledger schema used by
 `folio-enrich` and `folio-insights`. Each proposition records an asserter side and
 a validator side; either side may be null when that is the legally accurate state.
@@ -50,6 +52,23 @@ A `did:key` signature is self-certifying, so check `actor_did` against your own
 authorized signers. Install
 `folio-propositions[signing]` for the `did:key` Ed25519 verifier and the
 `sign_transition` helper. See the [v0.4.0 migration notes](docs/migration-0.4.0.md).
+
+## Development checks
+
+From the repository root, install and run the same checks as CI:
+
+```bash
+uv venv .venv
+uv pip install --python .venv/bin/python -e '.[dev,signing]'
+.venv/bin/pytest -q
+.venv/bin/ruff check .
+.venv/bin/mypy src
+```
+
+CI runs these checks on Python 3.11, 3.12, and 3.13. A separate job installs
+only the core package and verifies its isolated import without `cryptography`.
+The test suite uses fixed ontology IRIs and content-identity golden vectors;
+it does not fetch an ontology or require sibling repositories.
 
 ## Docs
 
