@@ -28,6 +28,29 @@ folio_iri = WORKING_TAXONOMY[open_position.proposition_type]
 working types remain valid entries with a `None` IRI until FOLIO gains an exact
 class for them.
 
+## Content identity
+
+`content_iri(source_uri, span)` returns the same `urn:folio:shard/…` IRI that
+folio-insights mints for a shard drawn from that span of that source, so the two
+products can match a proposition to a corpus shard. The identity is per
+`(source, span)`: URIs and spans are normalized (case, trailing slash, NFC,
+newlines, surrounding whitespace) before hashing. Set `source_uri` on a
+`PropositionDocumentRecord` and call `stamp_content_iris(record)` to fill every
+proposition's `content_iri`; `document_source_uri(text)` gives a deterministic
+URI when a document has none.
+
+## Axiom lifecycle
+
+`axiom_status` changes only through `apply_transition`, which checks the legal
+transition table (`proposition → promoted ⇄ demoted`, any of them →
+`superseded`, which is terminal) and verifies the actor's signature. Every
+change is appended to `axiom_history` with its sequence number, and the
+signature binds the proposition id, its stamped `content_iri` and that sequence.
+A `did:key` signature is self-certifying, so check `actor_did` against your own
+authorized signers. Install
+`folio-propositions[signing]` for the `did:key` Ed25519 verifier and the
+`sign_transition` helper. See the [v0.4.0 migration notes](docs/migration-0.4.0.md).
+
 ## Docs
 
 See the [documentation index](docs/README.md) for the folio-insights shard
