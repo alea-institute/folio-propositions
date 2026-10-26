@@ -2,6 +2,8 @@
 
 import importlib.util
 import json
+import subprocess
+import sys
 from copy import deepcopy
 from pathlib import Path
 
@@ -273,3 +275,24 @@ def test_legacy_trust_cannot_accept_an_extra_migrate_entry(example, policy):
     proposition["axiom_status"] = "demoted"
     with pytest.raises(ValidationError, match="only the first"):
         example.load_demo_record(json.dumps(data), policy, trust_legacy_source=True)
+
+
+def test_checkout_script_entry_point():
+    result = subprocess.run(
+        [sys.executable, str(EXAMPLE)],
+        cwd=EXAMPLE.parents[1],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=20,
+    )
+    assert result.stderr == ""
+    assert result.stdout.splitlines() == [
+        "Unauthorized signer: rejected despite a valid signature",
+        "Unauthorized saved history: rejected",
+        "Obsolete demotion: rejected",
+        "Native lifecycle: superseded; 4 signed entries verified and replayed",
+        "Unsigned legacy status: rejected by default",
+        "Signed append: legacy trust still required",
+        "Legacy lifecycle: demoted; unsigned anchor retained, 1 signed entry verified",
+    ]
