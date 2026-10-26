@@ -338,7 +338,7 @@ def test_signed_transitions_require_actor_time_signature_and_aware_time():
         with pytest.raises(ValidationError):
             AxiomTransition(**{**base, missing: None})
     with pytest.raises(ValidationError):
-        AxiomTransition(**{**base, "at": datetime(2026, 10, 9, 12, 0)})  # noqa: DTZ001
+        AxiomTransition(**{**base, "at": datetime(2026, 10, 9, 12, 0)})
     with pytest.raises(ValidationError):
         AxiomTransition(
             **{**base, "signature": {**base["signature"], "algorithm": "rsa"}}
