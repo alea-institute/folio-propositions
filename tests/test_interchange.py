@@ -1,12 +1,16 @@
+from copy import deepcopy
+
 import pytest
 from pydantic import ValidationError
 
 from folio_propositions import (
+    MIGRATIONS,
     SCHEMA_VERSION,
     Proposition,
     PropositionDocumentRecord,
     content_iri,
     migrate_record,
+    register_migration,
     stamp_content_iris,
 )
 
@@ -446,3 +450,89 @@ def test_v3_to_v4_migration_preserves_existing_history_and_numbers_it():
     assert Proposition.model_validate(migrated).axiom_history[0].reason == (
         "already recorded"
     )
+
+
+def current_record():
+    return {
+        "schema_version": 4,
+        "propositions": [{"schema_version": 4, "axiom_history": []}],
+        "document_metadata": {"labels": ["original"]},
+    }
+
+
+def test_migration_rejects_downgrade_without_mutating_nested_input():
+    stored = current_record()
+    before = deepcopy(stored)
+    with pytest.raises(ValueError, match="schema downgrades are not supported"):
+        migrate_record(stored, target_version=3)
+    assert stored == before
+
+
+def test_migration_noop_returns_independently_mutable_nested_data():
+    stored = current_record()
+    migrated = migrate_record(stored)
+    assert migrated == stored
+    migrated["document_metadata"]["labels"].append("copy")
+    migrated["propositions"][0]["axiom_history"].append({"reason": "copy"})
+    assert stored == current_record()
+
+
+def test_missing_migration_step_preserves_input(monkeypatch):
+    monkeypatch.delitem(MIGRATIONS, (3, 4))
+    stored = {"schema_version": 3, "document_metadata": {"labels": ["original"]}}
+    before = deepcopy(stored)
+    with pytest.raises(ValueError, match="no migration registered for v3 to v4"):
+        migrate_record(stored)
+    assert stored == before
+
+
+def test_nonconsecutive_migration_registration_is_rejected():
+    with pytest.raises(ValueError, match="advance exactly one version"):
+        register_migration(4, 6)
+
+
+def test_consecutive_registration_returns_and_dispatches_callback_once(monkeypatch):
+    # Replace the registry for this test so the callback cannot leak to later tests.
+    from folio_propositions import interchange
+
+    monkeypatch.setattr(interchange, "MIGRATIONS", {})
+    calls = []
+
+    def step(data):
+        calls.append(deepcopy(data))
+        data["schema_version"] = 5
+        data["document_metadata"]["labels"].append("migrated")
+        return data
+
+    assert register_migration(4, 5)(step) is step
+    stored = {"schema_version": 4, "document_metadata": {"labels": ["original"]}}
+    before = deepcopy(stored)
+    migrated = migrate_record(stored, target_version=5)
+    assert calls == [before]
+    assert migrated == {
+        "schema_version": 5,
+        "document_metadata": {"labels": ["original", "migrated"]},
+    }
+    assert stored == before
+
+
+@pytest.mark.parametrize("stored", [{}, {"schema_version": None}, {"schema_version": 3.0}])
+def test_missing_null_and_noninteger_record_versions_are_rejected(stored):
+    with pytest.raises(ValueError, match="record schema_version must be an integer"):
+        migrate_record(stored)
+
+
+def test_historical_migration_fills_missing_child_version():
+    child = legacy_proposition("Legal Proposition", False)
+    del child["schema_version"]
+    stored = {"schema_version": 3, "propositions": [child]}
+    migrated = migrate_record(stored)
+    assert migrated["schema_version"] == 4
+    assert migrated["propositions"][0]["schema_version"] == 4
+    assert "schema_version" not in child
+
+
+def test_current_version_noop_rejects_missing_child_version():
+    stored = {"schema_version": 4, "propositions": [{"id": "unstamped"}]}
+    with pytest.raises(ValueError, match="proposition schema_version must match"):
+        migrate_record(stored)
