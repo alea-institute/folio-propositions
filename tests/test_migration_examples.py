@@ -186,3 +186,90 @@ def test_old_demotion_and_cross_identity_replay_fail(example, base, signer, poli
     ):
         with pytest.raises(AxiomSignatureError):
             apply_transition(start.model_copy(update=changes), promotion, policy)
+
+
+def test_legacy_walkthrough_retains_unsigned_anchor(example):
+    record = example.legacy_demo()
+    final = record.propositions[0]
+    assert final.axiom_status == AxiomStatus.DEMOTED
+    assert [entry.sequence for entry in final.axiom_history] == [0, 1]
+    assert [entry.action.value for entry in final.axiom_history] == [
+        "migrate",
+        "demote",
+    ]
+    assert final.axiom_history[0].signature is None
+    assert final.axiom_history[1].signature is not None
+
+
+def test_legacy_trust_is_explicit_before_and_after_signed_append(
+    example, signer, policy
+):
+    stored = example.v3_record(AxiomStatus.PROMOTED)
+    before = deepcopy(stored)
+    base = example.migrate_demo_record(stored)
+    start = base.propositions[0]
+    anchor = start.axiom_history[0].model_dump()
+    assert stored == before
+    assert anchor == {
+        "sequence": 0,
+        "from_status": AxiomStatus.PROPOSITION,
+        "to_status": AxiomStatus.PROMOTED,
+        "action": "migrate",
+        "actor_did": None,
+        "at": None,
+        "reason": "pre-v4 status without recorded transition",
+        "signature": None,
+    }
+    saved = base.model_dump_json()
+    with pytest.raises(AxiomSignatureError, match="unverified legacy status"):
+        example.load_demo_record(saved, policy)
+    trusted = example.load_demo_record(saved, policy, trust_legacy_source=True)
+    assert trusted == base
+    demotion = signer.transition(trusted.propositions[0], AxiomStatus.DEMOTED)
+    demoted = apply_transition(trusted.propositions[0], demotion, policy)
+    assert demotion.sequence == 1
+    assert demoted.axiom_history[0].model_dump() == anchor
+    assert start.axiom_status == AxiomStatus.PROMOTED
+    assert len(start.axiom_history) == 1
+    saved = saved_record(base, demoted)
+    with pytest.raises(AxiomSignatureError, match="unverified legacy status"):
+        example.load_demo_record(saved, policy)
+    assert (
+        example.load_demo_record(saved, policy, trust_legacy_source=True).propositions[
+            0
+        ]
+        == demoted
+    )
+
+
+@pytest.mark.parametrize("violation", ["unauthorized", "tampered"])
+def test_legacy_trust_does_not_bypass_later_signer_checks(
+    example, signer, policy, violation
+):
+    base = example.migrate_demo_record(example.v3_record(AxiomStatus.PROMOTED))
+    start = base.propositions[0]
+    actor = example.DemoSigner() if violation == "unauthorized" else signer
+    demoted = apply_transition(
+        start, actor.transition(start, AxiomStatus.DEMOTED), DidKeyEd25519Verifier()
+    )
+    data = json.loads(saved_record(base, demoted))
+    if violation == "tampered":
+        data["propositions"][0]["axiom_history"][1]["reason"] = "edited"
+    with pytest.raises(AxiomSignatureError):
+        example.load_demo_record(json.dumps(data), policy, trust_legacy_source=True)
+
+
+def test_legacy_trust_cannot_accept_an_extra_migrate_entry(example, policy):
+    base = example.migrate_demo_record(example.v3_record(AxiomStatus.PROMOTED))
+    data = base.model_dump(mode="json")
+    proposition = data["propositions"][0]
+    extra = {
+        **proposition["axiom_history"][0],
+        "sequence": 1,
+        "from_status": "promoted",
+        "to_status": "demoted",
+    }
+    proposition["axiom_history"].append(extra)
+    proposition["axiom_status"] = "demoted"
+    with pytest.raises(ValidationError, match="only the first"):
+        example.load_demo_record(json.dumps(data), policy, trust_legacy_source=True)
