@@ -1,0 +1,266 @@
+{
+  "fixture_version": 1,
+  "cases": [
+    {
+      "id": "plain-ascii",
+      "source_uri": "https://example.com/opinions/palsgraf",
+      "span": "The risk reasonably to be perceived defines the duty to be obeyed.",
+      "normalized_source_uri": "https://example.com/opinions/palsgraf",
+      "normalized_span": "The risk reasonably to be perceived defines the duty to be obeyed.",
+      "provenance_hash": "60fd4827bbe451edea90e38b6735314d5d95bf6e29c9918a980d8f3169a34438",
+      "iri": "urn:folio:shard/60fd4827bbe451edea90e38b6735314d"
+    },
+    {
+      "id": "scheme-host-case-trailing-slash",
+      "source_uri": "HTTPS://Example.COM/a/",
+      "span": "x\ny",
+      "normalized_source_uri": "https://example.com/a",
+      "normalized_span": "x\ny",
+      "provenance_hash": "14fb4355508f618ede208ef919c1499f8b1b7d869665f14c1f8a2244deaddcff",
+      "iri": "urn:folio:shard/14fb4355508f618ede208ef919c1499f"
+    },
+    {
+      "id": "nfc-path",
+      "source_uri": "https://example.com/caf\u00e9",
+      "span": "span",
+      "normalized_source_uri": "https://example.com/caf%C3%A9",
+      "normalized_span": "span",
+      "provenance_hash": "9b76e0ee402e98b4a5ca4dfc6229913d0405dc045e186482140bf9b423dd8cb5",
+      "iri": "urn:folio:shard/9b76e0ee402e98b4a5ca4dfc6229913d"
+    },
+    {
+      "id": "nfd-path",
+      "source_uri": "https://example.com/cafe\u0301",
+      "span": "span",
+      "normalized_source_uri": "https://example.com/caf%C3%A9",
+      "normalized_span": "span",
+      "provenance_hash": "9b76e0ee402e98b4a5ca4dfc6229913d0405dc045e186482140bf9b423dd8cb5",
+      "iri": "urn:folio:shard/9b76e0ee402e98b4a5ca4dfc6229913d"
+    },
+    {
+      "id": "crlf-span",
+      "source_uri": "https://example.com/doc",
+      "span": "line one\r\nline two",
+      "normalized_source_uri": "https://example.com/doc",
+      "normalized_span": "line one\nline two",
+      "provenance_hash": "293c36cd655b6e86ca388f953c3190cf44e65fc9eb1b763b60f0cd67780e5e0f",
+      "iri": "urn:folio:shard/293c36cd655b6e86ca388f953c3190cf"
+    },
+    {
+      "id": "surrounding-whitespace",
+      "source_uri": "https://example.com/doc",
+      "span": "  padded span \n",
+      "normalized_source_uri": "https://example.com/doc",
+      "normalized_span": "padded span",
+      "provenance_hash": "a3bb531c78c793373fc2e3256318da582cfcd0e48838cfee8354deff0088a5b9",
+      "iri": "urn:folio:shard/a3bb531c78c793373fc2e3256318da58"
+    },
+    {
+      "id": "query-and-fragment",
+      "source_uri": "https://example.com/doc?page=2#para-7",
+      "span": "span",
+      "normalized_source_uri": "https://example.com/doc?page=2#para-7",
+      "normalized_span": "span",
+      "provenance_hash": "f20f78877bb6b6f203ae5ad5bf5bd3fce99ecc4008183f88495575a5169c15f3",
+      "iri": "urn:folio:shard/f20f78877bb6b6f203ae5ad5bf5bd3fc"
+    },
+    {
+      "id": "urn-uri",
+      "source_uri": "urn:sha256:abc123",
+      "span": "span",
+      "normalized_source_uri": "urn:sha256:abc123",
+      "normalized_span": "span",
+      "provenance_hash": "83023af2a4c18f82ce310676bf7373e1b0ef71c63e63b33ffde1ad33394f3a05",
+      "iri": "urn:folio:shard/83023af2a4c18f82ce310676bf7373e1"
+    },
+    {
+      "id": "canonical-a",
+      "source_uri": "https://example.com/a",
+      "span": "x\ny",
+      "normalized_source_uri": "https://example.com/a",
+      "normalized_span": "x\ny",
+      "provenance_hash": "14fb4355508f618ede208ef919c1499f8b1b7d869665f14c1f8a2244deaddcff",
+      "iri": "urn:folio:shard/14fb4355508f618ede208ef919c1499f"
+    },
+    {
+      "id": "lf-span",
+      "source_uri": "https://example.com/doc",
+      "span": "line one\nline two",
+      "normalized_source_uri": "https://example.com/doc",
+      "normalized_span": "line one\nline two",
+      "provenance_hash": "293c36cd655b6e86ca388f953c3190cf44e65fc9eb1b763b60f0cd67780e5e0f",
+      "iri": "urn:folio:shard/293c36cd655b6e86ca388f953c3190cf"
+    },
+    {
+      "id": "bare-cr-span",
+      "source_uri": "https://example.com/doc",
+      "span": "line one\rline two",
+      "normalized_source_uri": "https://example.com/doc",
+      "normalized_span": "line one\nline two",
+      "provenance_hash": "293c36cd655b6e86ca388f953c3190cf44e65fc9eb1b763b60f0cd67780e5e0f",
+      "iri": "urn:folio:shard/293c36cd655b6e86ca388f953c3190cf"
+    },
+    {
+      "id": "unpadded-span",
+      "source_uri": "https://example.com/doc",
+      "span": "padded span",
+      "normalized_source_uri": "https://example.com/doc",
+      "normalized_span": "padded span",
+      "provenance_hash": "a3bb531c78c793373fc2e3256318da582cfcd0e48838cfee8354deff0088a5b9",
+      "iri": "urn:folio:shard/a3bb531c78c793373fc2e3256318da58"
+    },
+    {
+      "id": "nfc-span",
+      "source_uri": "https://example.com/doc",
+      "span": "caf\u00e9 holding",
+      "normalized_source_uri": "https://example.com/doc",
+      "normalized_span": "caf\u00e9 holding",
+      "provenance_hash": "1315ec9ff49c9c2ab78915eec9a9b62a68125bc5e455ce84fcb17da61d3ee54c",
+      "iri": "urn:folio:shard/1315ec9ff49c9c2ab78915eec9a9b62a"
+    },
+    {
+      "id": "nfd-span",
+      "source_uri": "https://example.com/doc",
+      "span": "cafe\u0301 holding",
+      "normalized_source_uri": "https://example.com/doc",
+      "normalized_span": "caf\u00e9 holding",
+      "provenance_hash": "1315ec9ff49c9c2ab78915eec9a9b62a68125bc5e455ce84fcb17da61d3ee54c",
+      "iri": "urn:folio:shard/1315ec9ff49c9c2ab78915eec9a9b62a"
+    },
+    {
+      "id": "base-doc",
+      "source_uri": "https://example.com/doc",
+      "span": "span",
+      "normalized_source_uri": "https://example.com/doc",
+      "normalized_span": "span",
+      "provenance_hash": "5cf42353ce439b2d52c664b670fdc4bc3ccbcd467ac986182255dea68512628a",
+      "iri": "urn:folio:shard/5cf42353ce439b2d52c664b670fdc4bc"
+    },
+    {
+      "id": "changed-source",
+      "source_uri": "https://example.com/other",
+      "span": "span",
+      "normalized_source_uri": "https://example.com/other",
+      "normalized_span": "span",
+      "provenance_hash": "11460bc24ecfd1beee127494ce90a51818116530d34a7d23d1f294135507e16e",
+      "iri": "urn:folio:shard/11460bc24ecfd1beee127494ce90a518"
+    },
+    {
+      "id": "changed-span",
+      "source_uri": "https://example.com/doc",
+      "span": "other span",
+      "normalized_source_uri": "https://example.com/doc",
+      "normalized_span": "other span",
+      "provenance_hash": "a1883e28eedb2b6d3e7ebbfdec25e32a540c46d221d1d3b65b31d9e2ebae0304",
+      "iri": "urn:folio:shard/a1883e28eedb2b6d3e7ebbfdec25e32a"
+    },
+    {
+      "id": "changed-query",
+      "source_uri": "https://example.com/doc?page=3#para-7",
+      "span": "span",
+      "normalized_source_uri": "https://example.com/doc?page=3#para-7",
+      "normalized_span": "span",
+      "provenance_hash": "42490d4b32be7aa6ba0fd2e5ad2eab0006ef122cc214f104be65991d52677aeb",
+      "iri": "urn:folio:shard/42490d4b32be7aa6ba0fd2e5ad2eab00"
+    },
+    {
+      "id": "changed-fragment",
+      "source_uri": "https://example.com/doc?page=2#para-8",
+      "span": "span",
+      "normalized_source_uri": "https://example.com/doc?page=2#para-8",
+      "normalized_span": "span",
+      "provenance_hash": "da0ce3117881275b3938652f79f3d37b134deb2c63c8c5cc8db61ca534ba16a0",
+      "iri": "urn:folio:shard/da0ce3117881275b3938652f79f3d37b"
+    },
+    {
+      "id": "root-slash",
+      "source_uri": "https://example.com/",
+      "span": "span",
+      "normalized_source_uri": "https://example.com/",
+      "normalized_span": "span",
+      "provenance_hash": "dc190904f57b7f5ef90842d7a72248e459b092ef29cd9b82fee526843bc1ef5c",
+      "iri": "urn:folio:shard/dc190904f57b7f5ef90842d7a72248e4"
+    },
+    {
+      "id": "no-root-slash",
+      "source_uri": "https://example.com",
+      "span": "span",
+      "normalized_source_uri": "https://example.com",
+      "normalized_span": "span",
+      "provenance_hash": "5f878884bac2b0ed8b1579b3954b7df88c85928556508eeeec1a511569314743",
+      "iri": "urn:folio:shard/5f878884bac2b0ed8b1579b3954b7df8"
+    },
+    {
+      "id": "path-case",
+      "source_uri": "https://example.com/Doc",
+      "span": "span",
+      "normalized_source_uri": "https://example.com/Doc",
+      "normalized_span": "span",
+      "provenance_hash": "a9397874d1d927468c8d16a3faf10eb16c872b6c93dd1c39c883c0df37ca8e4b",
+      "iri": "urn:folio:shard/a9397874d1d927468c8d16a3faf10eb1"
+    },
+    {
+      "id": "single-space",
+      "source_uri": "https://example.com/doc",
+      "span": "two words",
+      "normalized_source_uri": "https://example.com/doc",
+      "normalized_span": "two words",
+      "provenance_hash": "db8fd095f29beb22928bc0755fa07133ce12faa48dd5789e065dc3311ed848e1",
+      "iri": "urn:folio:shard/db8fd095f29beb22928bc0755fa07133"
+    },
+    {
+      "id": "double-space",
+      "source_uri": "https://example.com/doc",
+      "span": "two  words",
+      "normalized_source_uri": "https://example.com/doc",
+      "normalized_span": "two  words",
+      "provenance_hash": "5c1be74424dc3417a4d394bf0db18f4d33a7720d8433f7db2081b7dfbf932bb9",
+      "iri": "urn:folio:shard/5c1be74424dc3417a4d394bf0db18f4d"
+    },
+    {
+      "id": "interior-tab",
+      "source_uri": "https://example.com/doc",
+      "span": "two\twords",
+      "normalized_source_uri": "https://example.com/doc",
+      "normalized_span": "two\twords",
+      "provenance_hash": "dbf3f04a130697f4c068e64e59687dab2f19e88e7e2412100681c3f9baa388f1",
+      "iri": "urn:folio:shard/dbf3f04a130697f4c068e64e59687dab"
+    },
+    {
+      "id": "encoded-path",
+      "source_uri": "https://example.com/caf%C3%A9",
+      "span": "span",
+      "normalized_source_uri": "https://example.com/caf%C3%A9",
+      "normalized_span": "span",
+      "provenance_hash": "9b76e0ee402e98b4a5ca4dfc6229913d0405dc045e186482140bf9b423dd8cb5",
+      "iri": "urn:folio:shard/9b76e0ee402e98b4a5ca4dfc6229913d"
+    },
+    {
+      "id": "encoded-path-lowercase",
+      "source_uri": "https://example.com/caf%c3%a9",
+      "span": "span",
+      "normalized_source_uri": "https://example.com/caf%c3%a9",
+      "normalized_span": "span",
+      "provenance_hash": "33ea63c1f5caf1e151fffc863543b4727ad1a1e5119a9561ca6a07521954499d",
+      "iri": "urn:folio:shard/33ea63c1f5caf1e151fffc863543b472"
+    },
+    {
+      "id": "encoded-path-slash",
+      "source_uri": "https://example.com/a%2Fb",
+      "span": "span",
+      "normalized_source_uri": "https://example.com/a%2Fb",
+      "normalized_span": "span",
+      "provenance_hash": "49f2933064c0317a713052949a9204e14fe010ee09c0e7e33960357b38f03161",
+      "iri": "urn:folio:shard/49f2933064c0317a713052949a9204e1"
+    },
+    {
+      "id": "literal-path-slash",
+      "source_uri": "https://example.com/a/b",
+      "span": "span",
+      "normalized_source_uri": "https://example.com/a/b",
+      "normalized_span": "span",
+      "provenance_hash": "291062f90e1fc6c98450bf5fba752c73c20f7cf8f838dd2b0053612f8971061f",
+      "iri": "urn:folio:shard/291062f90e1fc6c98450bf5fba752c73"
+    }
+  ]
+}
