@@ -52,6 +52,9 @@ A `did:key` signature is self-certifying, so check `actor_did` against your own
 authorized signers. Install
 `folio-propositions[signing]` for the `did:key` Ed25519 verifier and the
 `sign_transition` helper. See the [v0.4.0 migration notes](docs/migration-0.4.0.md).
+For a runnable walkthrough of caller-owned signer policy, saved-history replay,
+and explicit legacy trust, see the
+[consumer migration examples](docs/migration-0.4.0.md#run-the-consumer-examples).
 
 ## Development checks
 
