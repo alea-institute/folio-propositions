@@ -147,7 +147,6 @@ def native_demo() -> tuple[PropositionDocumentRecord, Proposition]:
     else:
         raise AssertionError("Expected caller policy to reject the outsider")
 
-    # This record is cryptographically valid, but its actor is not authorized.
     outsider_record = base.model_copy(
         update={
             "propositions": [
