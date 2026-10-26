@@ -1,5 +1,6 @@
 # Documentation index
 
+- [Consumer compatibility](consumer-compatibility.md) — portable shared shard identity fixtures, reuse instructions, and local proposition-to-shard join checks.
 - [Shard mapping](shard-mapping.md) — living document mapping folio-insights v2.0 shard subtypes to the shared Proposition API and tracking evidence status.
 - [Ledger rationale](rationale.md) — living review document explaining the model, adoption boundary, and falsification criteria.
 - [FOLIO taxonomy alignment](folio-taxonomy-alignment.md) — top-down inventory, bottom-up mapping, and the approved v0.3.0 metadata alignment.
