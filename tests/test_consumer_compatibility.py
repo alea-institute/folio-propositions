@@ -6,13 +6,17 @@ import re
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 from test_identity import GOLDEN
 
 from folio_propositions import (
+    Proposition,
+    PropositionDocumentRecord,
     content_identity,
     content_iri,
     normalize_source_uri,
     normalize_span,
+    stamp_content_iris,
 )
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "shared_shard_identity_v1.json"
@@ -153,3 +157,137 @@ def test_loader_identifies_malformed_cases(tmp_path, cases, message):
     path.write_text(json.dumps({"fixture_version": 1, "cases": cases}), encoding="utf-8")
     with pytest.raises(AssertionError, match=message):
         load_cases(path)
+
+
+def spanned(proposition_id, text, **overrides):
+    values = {
+        "id": proposition_id,
+        "start_char": 0 if text is not None else None,
+        "end_char": len(text) if text is not None else None,
+        "text": text,
+        "proposition_type": "Legal Proposition",
+        "asserter": {"role": "party"},
+        "validator": None,
+        "disposition": "unresolved",
+    }
+    values.update(overrides)
+    return Proposition(**values)
+
+
+@pytest.mark.parametrize("case", CASES, ids=lambda case: case["id"])
+def test_distinct_propositions_join_fixture_shard_after_json_round_trip(case):
+    record = PropositionDocumentRecord(
+        document_id="extraction-1",
+        source_uri=case["source_uri"],
+        propositions=[
+            spanned("legal-1", case["span"], asserter={"role": "appellant"}),
+            spanned(
+                "fact-2",
+                case["span"],
+                proposition_type="Factual Statement",
+                asserter={"role": "secondary_source", "name": "Example source"},
+                start_char=100,
+                end_char=100 + len(case["span"]),
+            ),
+        ],
+        document_metadata={"title": "Example document", "extraction": 1},
+        generator={"tool": "example-consumer", "version": "1.0"},
+    )
+    before = record.model_dump()
+
+    stamped = stamp_content_iris(record)
+
+    assert record.model_dump() == before
+    assert stamped is not record
+    assert all(new is not old for new, old in zip(stamped.propositions, record.propositions))
+    expected = record.model_dump()
+    for proposition in expected["propositions"]:
+        proposition["content_iri"] = case["iri"]
+    # Only the stamps change; raw text, offsets, IDs and metadata survive.
+    assert stamped.model_dump() == expected
+    assert stamp_content_iris(stamped) == stamped
+    restored = PropositionDocumentRecord.model_validate_json(stamped.model_dump_json())
+    assert restored == stamped
+    assert [proposition.content_iri for proposition in restored.propositions] == [
+        case["iri"], case["iri"]
+    ]
+
+
+def test_extraction_and_document_metadata_do_not_change_fixture_join_key():
+    case = BY_ID["plain-ascii"]
+    for extraction, offset in [(1, 0), (2, 500)]:
+        record = PropositionDocumentRecord(
+            document_id=f"document-{extraction}",
+            source_uri=case["source_uri"],
+            propositions=[spanned(
+                f"proposition-{extraction}",
+                case["span"],
+                start_char=offset,
+                end_char=offset + len(case["span"]),
+            )],
+            document_metadata={"title": f"Title {extraction}"},
+            generator={"tool": f"extractor-{extraction}", "version": str(extraction)},
+        )
+        before = record.model_dump()
+        stamped = stamp_content_iris(record)
+        assert record.model_dump() == before
+        before["propositions"][0]["content_iri"] = case["iri"]
+        assert stamped.model_dump() == before
+
+
+def test_changed_source_or_span_produces_distinct_fixture_join_keys():
+    join_keys = []
+    for case_id in ("base-doc", "changed-source", "changed-span"):
+        case = BY_ID[case_id]
+        record = PropositionDocumentRecord(
+            document_id="same-document-id",
+            source_uri=case["source_uri"],
+            propositions=[spanned("same-proposition-id", case["span"])],
+        )
+        stamped = stamp_content_iris(record)
+        assert stamped.propositions[0].content_iri == case["iri"]
+        join_keys.append(stamped.propositions[0].content_iri)
+    assert len(set(join_keys)) == 3
+
+
+def test_missing_and_normalized_empty_text_remain_unstamped():
+    case = BY_ID["base-doc"]
+    record = PropositionDocumentRecord(
+        document_id="mixed-spans",
+        source_uri=case["source_uri"],
+        propositions=[
+            spanned("missing", None),
+            spanned("empty", ""),
+            spanned("blank", " \t\r\n "),
+            spanned("present", case["span"]),
+        ],
+    )
+    stamped = stamp_content_iris(record)
+    assert [proposition.content_iri for proposition in stamped.propositions] == [
+        None, None, None, case["iri"]
+    ]
+    assert all(proposition.content_iri is None for proposition in record.propositions)
+    assert PropositionDocumentRecord.model_validate_json(stamped.model_dump_json()) == stamped
+
+
+@pytest.mark.parametrize("stamp", [None, BY_ID["changed-source"]["iri"]])
+def test_missing_source_accepts_unverified_stamp_but_prevents_stamping(stamp):
+    record = PropositionDocumentRecord(
+        document_id="unknown-source",
+        propositions=[spanned("p-1", BY_ID["base-doc"]["span"], content_iri=stamp)],
+    )
+    restored = PropositionDocumentRecord.model_validate_json(record.model_dump_json())
+    assert restored.propositions[0].content_iri == stamp
+    with pytest.raises(ValueError, match="requires record.source_uri"):
+        stamp_content_iris(restored)
+
+
+def test_record_rejects_validly_shaped_stamp_from_different_source():
+    case = BY_ID["base-doc"]
+    wrong_stamp = BY_ID["changed-source"]["iri"]
+    with pytest.raises(ValidationError, match="p-wrong content_iri does not match"):
+        PropositionDocumentRecord(
+            document_id="mismatched-stamp",
+            source_uri=case["source_uri"],
+            propositions=[spanned("p-wrong", case["span"], content_iri=wrong_stamp)],
+        )
