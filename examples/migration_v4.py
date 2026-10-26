@@ -192,8 +192,46 @@ def native_demo() -> tuple[PropositionDocumentRecord, Proposition]:
     return restored, replayed
 
 
+def legacy_demo() -> PropositionDocumentRecord:
+    """Keep an unsigned legacy status claim; trust it only by caller opt-in."""
+    base = migrate_demo_record(v3_record(AxiomStatus.PROMOTED))
+    signer = DemoSigner()
+    policy = AuthorizedVerifier({signer.did})
+    saved = base.model_dump_json()
+    try:
+        load_demo_record(saved, policy)
+    except AxiomSignatureError:
+        print("Unsigned legacy status: rejected by default")
+    else:
+        raise AssertionError("Expected rejection of an unsigned legacy status")
+
+    # This opt-in belongs to the caller that trusts the original v3 source.
+    # It does not turn the migration opener into a verified historical decision.
+    trusted = load_demo_record(saved, policy, trust_legacy_source=True)
+    start = trusted.propositions[0]
+    demoted = apply_transition(
+        start, signer.transition(start, AxiomStatus.DEMOTED), policy
+    )
+    saved = trusted.model_copy(update={"propositions": [demoted]}).model_dump_json()
+    try:
+        load_demo_record(saved, policy)
+    except AxiomSignatureError:
+        print("Signed append: legacy trust still required")
+    else:
+        raise AssertionError("A signed append must not legitimize an unsigned opener")
+
+    # The opt-in skips only the opener. Every signed entry still needs both
+    # caller authorization and a valid signature, on every acceptance.
+    restored = load_demo_record(saved, policy, trust_legacy_source=True)
+    print(
+        "Legacy lifecycle: demoted; unsigned anchor retained, 1 signed entry verified"
+    )
+    return restored
+
+
 def main() -> None:
     native_demo()
+    legacy_demo()
 
 
 if __name__ == "__main__":
