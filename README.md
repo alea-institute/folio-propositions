@@ -46,6 +46,10 @@ newlines, surrounding whitespace) before hashing. Set `source_uri` on a
 proposition's `content_iri`; `document_source_uri(text)` gives a deterministic
 URI when a document has none.
 
+Consumer developers can check their implementation against the portable
+[shared shard identity fixtures](docs/consumer-compatibility.md), including
+literal normalization outputs and fixture-backed proposition-to-shard joins.
+
 ## Axiom lifecycle
 
 `axiom_status` changes only through `apply_transition`, which checks the legal
