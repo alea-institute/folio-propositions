@@ -1,7 +1,7 @@
 """Signed axiom lifecycle for propositions.
 
-A proposition starts as a plain ``proposition``. Promotion, demotion, and
-supersession are recorded as an append-only history of
+A proposition starts as a plain ``proposition``. Promotion, demotion,
+rejection, overrides, and supersession are recorded as an append-only history of
 :class:`AxiomTransition` entries, each signed by the acting identity (a DID).
 :func:`apply_transition` is the only sanctioned way to advance
 ``Proposition.axiom_status``; it checks the transition table and verifies the
@@ -12,6 +12,20 @@ signature covers the proposition id, its stamped content IRI, and that
 sequence. An old signed entry therefore cannot be re-appended to roll a status
 back, nor replayed onto another proposition or span. A signed transition
 requires a stamped ``content_iri``.
+
+Two actions record *why* a status changed rather than adding new statuses:
+
+- ``reject`` moves an unreviewed ``proposition`` to ``demoted`` when automated
+  verification or a reviewer rejects it. It is the only way to reach
+  ``demoted`` without first being ``promoted``.
+- ``override`` lets an authorized person overturn a status between
+  ``promoted`` and ``demoted`` in either direction (for example, demoting an
+  axiom that automated verification promoted). It shares those pairs with the
+  default ``demote`` and ``promote`` actions; the action label is what marks
+  the change as a human override of an automated status.
+
+Both require a non-blank ``reason``. The signer is the recorded author, and
+the reason and action are covered by the signature.
 
 ``did:key`` identities are self-certifying: a valid signature proves only that
 the holder of that key signed. Consumers must check ``actor_did`` against their
@@ -53,13 +67,18 @@ class AxiomAction(str, Enum):
     PROMOTE = "promote"
     DEMOTE = "demote"
     SUPERSEDE = "supersede"
+    REJECT = "reject"
+    OVERRIDE = "override"
     MIGRATE = "migrate"
 
 
+# Default action for each legal status pair. Kept one-action-per-pair for
+# backward compatibility; AXIOM_TRANSITION_ACTIONS is the full legality table.
 AXIOM_TRANSITIONS: Mapping[tuple[AxiomStatus, AxiomStatus], AxiomAction] = (
     MappingProxyType(
         {
             (AxiomStatus.PROPOSITION, AxiomStatus.PROMOTED): AxiomAction.PROMOTE,
+            (AxiomStatus.PROPOSITION, AxiomStatus.DEMOTED): AxiomAction.REJECT,
             (AxiomStatus.PROMOTED, AxiomStatus.DEMOTED): AxiomAction.DEMOTE,
             (AxiomStatus.DEMOTED, AxiomStatus.PROMOTED): AxiomAction.PROMOTE,
             (AxiomStatus.PROPOSITION, AxiomStatus.SUPERSEDED): AxiomAction.SUPERSEDE,
@@ -67,6 +86,32 @@ AXIOM_TRANSITIONS: Mapping[tuple[AxiomStatus, AxiomStatus], AxiomAction] = (
             (AxiomStatus.DEMOTED, AxiomStatus.SUPERSEDED): AxiomAction.SUPERSEDE,
         }
     )
+)
+
+# Every action legal for each status pair: the default action plus
+# ``override`` between promoted and demoted.
+_OVERRIDABLE = frozenset(
+    {
+        (AxiomStatus.PROMOTED, AxiomStatus.DEMOTED),
+        (AxiomStatus.DEMOTED, AxiomStatus.PROMOTED),
+    }
+)
+AXIOM_TRANSITION_ACTIONS: Mapping[
+    tuple[AxiomStatus, AxiomStatus], frozenset[AxiomAction]
+] = MappingProxyType(
+    {
+        pair: (
+            frozenset({action, AxiomAction.OVERRIDE})
+            if pair in _OVERRIDABLE
+            else frozenset({action})
+        )
+        for pair, action in AXIOM_TRANSITIONS.items()
+    }
+)
+
+# Actions that must carry a non-blank ``reason``.
+REASON_REQUIRED_ACTIONS: frozenset[AxiomAction] = frozenset(
+    {AxiomAction.REJECT, AxiomAction.OVERRIDE}
 )
 
 
@@ -85,22 +130,28 @@ class TransitionSignature(BaseModel):
 
 
 def _check_legal(
-    from_status: AxiomStatus, to_status: AxiomStatus, action: AxiomAction
+    from_status: AxiomStatus,
+    to_status: AxiomStatus,
+    action: AxiomAction,
+    reason: str | None = None,
 ) -> str | None:
-    """Return a reason the triple is illegal, or ``None`` when it is legal."""
+    """Return why the transition is illegal, or ``None`` when it is legal."""
 
     if action is AxiomAction.MIGRATE:
         if from_status == to_status:
             return "a migrate entry must change the status"
         return None
-    expected = AXIOM_TRANSITIONS.get((from_status, to_status))
-    if expected is None:
+    allowed = AXIOM_TRANSITION_ACTIONS.get((from_status, to_status))
+    if allowed is None:
         return f"illegal axiom transition {from_status.value} -> {to_status.value}"
-    if expected is not action:
+    if action not in allowed:
+        names = " or ".join(sorted(value.value for value in allowed))
         return (
             f"transition {from_status.value} -> {to_status.value} requires action "
-            f"{expected.value}, not {action.value}"
+            f"{names}, not {action.value}"
         )
+    if action in REASON_REQUIRED_ACTIONS and (reason is None or not reason.strip()):
+        return f"a {action.value} transition requires a non-blank reason"
     return None
 
 
@@ -120,7 +171,9 @@ class _TransitionBody(BaseModel):
             self.actor_did is None or self.at is None
         ):
             raise ValueError("signed transitions require actor_did and at")
-        problem = _check_legal(self.from_status, self.to_status, self.action)
+        problem = _check_legal(
+            self.from_status, self.to_status, self.action, self.reason
+        )
         if problem is not None:
             raise ValueError(problem)
 
@@ -231,7 +284,8 @@ def apply_transition(
 
     Raises :class:`IllegalAxiomTransition` when the transition does not start
     from the proposition's current status, uses ``migrate``, is not in
-    :data:`AXIOM_TRANSITIONS`, does not carry the next ``sequence``
+    :data:`AXIOM_TRANSITION_ACTIONS`, lacks the ``reason`` a ``reject`` or
+    ``override`` requires, does not carry the next ``sequence``
     (``len(axiom_history)``), or is not strictly later than the last signed
     entry; raises :class:`AxiomSignatureError` when the proposition has no
     ``content_iri`` or the signature is missing or does not verify. The input
@@ -246,7 +300,10 @@ def apply_transition(
             f"{proposition.id} is {proposition.axiom_status.value}"
         )
     problem = _check_legal(
-        transition.from_status, transition.to_status, transition.action
+        transition.from_status,
+        transition.to_status,
+        transition.action,
+        transition.reason,
     )
     if problem is not None:
         raise IllegalAxiomTransition(problem)

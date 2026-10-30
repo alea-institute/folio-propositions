@@ -6,7 +6,9 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from pydantic import ValidationError
 
 from folio_propositions import (
+    AXIOM_TRANSITION_ACTIONS,
     AXIOM_TRANSITIONS,
+    REASON_REQUIRED_ACTIONS,
     AxiomAction,
     AxiomSignatureError,
     AxiomStatus,
@@ -117,6 +119,7 @@ def reach(status: AxiomStatus, signer) -> Proposition:
 def test_transition_table_is_read_only_and_complete():
     assert dict(AXIOM_TRANSITIONS) == {
         ("proposition", "promoted"): "promote",
+        ("proposition", "demoted"): "reject",
         ("promoted", "demoted"): "demote",
         ("demoted", "promoted"): "promote",
         ("proposition", "superseded"): "supersede",
@@ -129,6 +132,27 @@ def test_transition_table_is_read_only_and_complete():
     assert AxiomAction.MIGRATE not in AXIOM_TRANSITIONS.values()
     with pytest.raises(TypeError):
         AXIOM_TRANSITIONS[("superseded", "promoted")] = AxiomAction.PROMOTE  # type: ignore[index]
+
+
+def test_action_table_adds_override_beside_each_default_action():
+    assert {
+        pair: set(actions) for pair, actions in AXIOM_TRANSITION_ACTIONS.items()
+    } == {
+        ("proposition", "promoted"): {"promote"},
+        ("proposition", "demoted"): {"reject"},
+        ("promoted", "demoted"): {"demote", "override"},
+        ("demoted", "promoted"): {"promote", "override"},
+        ("proposition", "superseded"): {"supersede"},
+        ("promoted", "superseded"): {"supersede"},
+        ("demoted", "superseded"): {"supersede"},
+    }
+    # Every default action is one of the pair's legal actions.
+    for pair, action in AXIOM_TRANSITIONS.items():
+        assert action in AXIOM_TRANSITION_ACTIONS[pair]
+    assert AXIOM_TRANSITIONS.keys() == AXIOM_TRANSITION_ACTIONS.keys()
+    assert set(REASON_REQUIRED_ACTIONS) == {AxiomAction.REJECT, AxiomAction.OVERRIDE}
+    with pytest.raises(TypeError):
+        AXIOM_TRANSITION_ACTIONS[("superseded", "promoted")] = frozenset()  # type: ignore[index]
 
 
 @pytest.mark.parametrize(("pair", "action"), list(AXIOM_TRANSITIONS.items()))
@@ -338,7 +362,7 @@ def test_signed_transitions_require_actor_time_signature_and_aware_time():
         with pytest.raises(ValidationError):
             AxiomTransition(**{**base, missing: None})
     with pytest.raises(ValidationError):
-        AxiomTransition(**{**base, "at": datetime(2026, 10, 9, 12, 0)})  # noqa: DTZ001
+        AxiomTransition(**{**base, "at": datetime(2026, 10, 9, 12, 0)})
     with pytest.raises(ValidationError):
         AxiomTransition(
             **{**base, "signature": {**base["signature"], "algorithm": "rsa"}}
@@ -571,3 +595,179 @@ def test_overlong_did_key_and_key_id_are_rejected_before_decoding(signer):
     )
     assert VERIFIER.verify(payload, long_fragment, signer.did) is False
     assert VERIFIER.verify(payload, transition.signature, signer.did) is True
+
+
+LEGAL_TRIPLES = [
+    (from_status, to_status, action)
+    for (from_status, to_status), actions in AXIOM_TRANSITION_ACTIONS.items()
+    for action in sorted(actions, key=lambda value: value.value)
+]
+
+
+@pytest.mark.parametrize(("from_status", "to_status", "action"), LEGAL_TRIPLES)
+def test_every_legal_action_applies_and_verifies(
+    from_status, to_status, action, signer
+):
+    start = reach(from_status, signer)
+    transition = signed(start, from_status, to_status, signer, action=action)
+    result = apply_transition(start, transition, VERIFIER)
+    assert result.axiom_status == to_status
+    assert result.axiom_history[-1].action == action
+    verify_history(result, VERIFIER)
+    assert Proposition.model_validate_json(result.model_dump_json()) == result
+
+
+def test_reject_moves_an_unreviewed_proposition_to_demoted(signer):
+    value = proposition()
+    transition = signed(
+        value,
+        "proposition",
+        "demoted",
+        signer,
+        action="reject",
+        reason="encodings disagree on subd. 7",
+    )
+    rejected = apply_transition(value, transition, VERIFIER)
+    assert rejected.axiom_status == AxiomStatus.DEMOTED
+    entry = rejected.axiom_history[0]
+    assert entry.action == AxiomAction.REJECT
+    assert entry.actor_did == signer.did
+    assert entry.reason == "encodings disagree on subd. 7"
+    # A rejected proposition can still be superseded by newer content.
+    superseded = advance(rejected, AxiomStatus.SUPERSEDED, signer)
+    assert superseded.axiom_status == AxiomStatus.SUPERSEDED
+    verify_history(superseded, VERIFIER)
+
+
+def test_reject_is_the_only_action_from_proposition_to_demoted():
+    for action in (AxiomAction.DEMOTE, AxiomAction.OVERRIDE, AxiomAction.PROMOTE):
+        with pytest.raises(ValidationError, match="requires action"):
+            draft("proposition", "demoted", action=action)
+
+
+def test_reject_cannot_leave_a_promoted_or_demoted_status():
+    for from_status in ("promoted", "demoted", "superseded"):
+        with pytest.raises(ValidationError):
+            draft(from_status, "demoted", action=AxiomAction.REJECT)
+
+
+def test_override_demotes_a_promoted_axiom_and_records_author_and_reason(signer):
+    promoted = reach(AxiomStatus.PROMOTED, signer)
+    overseer = Signer()
+    transition = signed(
+        promoted,
+        "promoted",
+        "demoted",
+        overseer,
+        action="override",
+        reason="audit sample 12 shows the rule misreads subd. 3",
+    )
+    overridden = apply_transition(promoted, transition, VERIFIER)
+    assert overridden.axiom_status == AxiomStatus.DEMOTED
+    entry = overridden.axiom_history[-1]
+    assert entry.action == AxiomAction.OVERRIDE
+    assert entry.actor_did == overseer.did
+    assert entry.actor_did != promoted.axiom_history[0].actor_did
+    assert entry.reason == "audit sample 12 shows the rule misreads subd. 3"
+    verify_history(overridden, VERIFIER)
+
+
+def test_override_can_reinstate_a_demoted_axiom(signer):
+    demoted = reach(AxiomStatus.DEMOTED, signer)
+    transition = signed(
+        demoted,
+        "demoted",
+        "promoted",
+        signer,
+        action="override",
+        reason="verification failure was a solver timeout",
+    )
+    reinstated = apply_transition(demoted, transition, VERIFIER)
+    assert reinstated.axiom_status == AxiomStatus.PROMOTED
+    assert reinstated.axiom_history[-1].action == AxiomAction.OVERRIDE
+
+
+@pytest.mark.parametrize(
+    ("from_status", "to_status"),
+    [
+        ("proposition", "promoted"),
+        ("proposition", "superseded"),
+        ("promoted", "superseded"),
+        ("demoted", "superseded"),
+        ("superseded", "promoted"),
+        ("superseded", "demoted"),
+    ],
+)
+def test_override_is_refused_outside_promoted_and_demoted(from_status, to_status):
+    with pytest.raises(ValidationError):
+        draft(from_status, to_status, action=AxiomAction.OVERRIDE)
+
+
+@pytest.mark.parametrize(
+    ("from_status", "to_status", "action"),
+    [
+        ("proposition", "demoted", AxiomAction.REJECT),
+        ("promoted", "demoted", AxiomAction.OVERRIDE),
+        ("demoted", "promoted", AxiomAction.OVERRIDE),
+    ],
+)
+@pytest.mark.parametrize("reason", [None, "", "   \n\t"])
+def test_reject_and_override_require_a_reason(from_status, to_status, action, reason):
+    with pytest.raises(ValidationError, match="reason"):
+        draft(from_status, to_status, action=action, reason=reason)
+    with pytest.raises(ValidationError, match="reason"):
+        AxiomTransition(
+            sequence=0,
+            from_status=from_status,
+            to_status=to_status,
+            action=action,
+            actor_did="did:key:z6MkExample",
+            at=AT,
+            reason=reason,
+            signature={"algorithm": "ed25519", "key_id": "did:key:z#z", "value": "AA"},
+        )
+
+
+def test_forged_reasonless_override_is_refused_by_apply_transition(signer):
+    promoted = reach(AxiomStatus.PROMOTED, signer)
+    forged = AxiomTransition.model_construct(
+        sequence=len(promoted.axiom_history),
+        from_status=AxiomStatus.PROMOTED,
+        to_status=AxiomStatus.DEMOTED,
+        action=AxiomAction.OVERRIDE,
+        actor_did=signer.did,
+        at=AT + timedelta(days=1),
+        reason=None,
+        signature=TransitionSignature(
+            algorithm="ed25519", key_id=signer.key_id, value="AA"
+        ),
+    )
+    with pytest.raises(IllegalAxiomTransition, match="reason"):
+        apply_transition(promoted, forged, VERIFIER)
+
+
+def test_action_is_signed_so_demote_cannot_be_relabelled_override(signer):
+    promoted = reach(AxiomStatus.PROMOTED, signer)
+    demote = signed(promoted, "promoted", "demoted", signer)
+    relabelled = demote.model_copy(update={"action": AxiomAction.OVERRIDE})
+    with pytest.raises(AxiomSignatureError):
+        apply_transition(promoted, relabelled, VERIFIER)
+
+
+def test_override_payload_is_canonical_utc_json(signer):
+    transition = draft(
+        "promoted",
+        "demoted",
+        action="override",
+        signer=signer,
+        sequence=1,
+        reason="overseer override",
+    )
+    iri = "urn:folio:shard/0123456789abcdef0123456789abcdef"
+    assert transition_signing_payload("p-1", iri, transition) == (
+        '{"action":"override","actor_did":"' + signer.did + '",'
+        '"at":"2026-10-09T12:00:00Z","content_iri":"' + iri + '",'
+        '"from_status":"promoted","proposition_id":"p-1",'
+        '"reason":"overseer override","schema_version":4,"sequence":1,'
+        '"to_status":"demoted"}'
+    ).encode("utf-8")

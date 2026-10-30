@@ -15,9 +15,10 @@ from .lifecycle import AxiomAction, AxiomStatus, AxiomTransition
 
 SCHEMA_VERSION = 4
 
-_CONTENT_IRI_PATTERN = re.compile(
+_CONTENT_IRI_REGEX = (
     re.escape(CONTENT_IRI_PREFIX) + "[0-9a-f]{" + str(CONTENT_IRI_HEX_LEN) + "}"
 )
+_CONTENT_IRI_PATTERN = re.compile(_CONTENT_IRI_REGEX)
 
 # Canonical FOLIO labels carry their ontology IRIs. Library-local working types
 # remain closed taxonomy entries with no IRI until FOLIO grows an exact home.
@@ -57,6 +58,8 @@ class ActorRole(str, Enum):
     COURT = "court"
     SECONDARY_SOURCE = "secondary_source"
     SYSTEM = "system"
+    LEGISLATURE = "legislature"
+    AGENCY = "agency"
 
 
 class AdjudicationMode(str, Enum):
@@ -138,6 +141,22 @@ SHAPES: dict[str, PropositionShape] = {
         ),
         description="Dialectical proposition and response configuration.",
     ),
+    "normative": PropositionShape(
+        name="normative",
+        expected_roles=frozenset(
+            {
+                ActorRole.LEGISLATURE,
+                ActorRole.AGENCY,
+                ActorRole.COURT,
+                ActorRole.SYSTEM,
+            }
+        ),
+        description=(
+            "Normative legal text: statutes, regulations, court rules, and "
+            "holdings that state rules. The asserter is the enacting or issuing "
+            "authority; the validator is a court or an automated verifier."
+        ),
+    ),
 }
 
 
@@ -156,7 +175,12 @@ class Proposition(BaseModel):
     triple_ids: list[str] = Field(default_factory=list)
     shape: str = "litigation"
     axiom_status: AxiomStatus = AxiomStatus.PROPOSITION
-    content_iri: str | None = None
+    # The pattern is published in the JSON Schema; the model validator below
+    # enforces it with its own error message.
+    content_iri: str | None = Field(
+        default=None,
+        json_schema_extra={"pattern": "^" + _CONTENT_IRI_REGEX + "$"},
+    )
     axiom_history: list[AxiomTransition] = Field(default_factory=list)
 
     @model_validator(mode="after")

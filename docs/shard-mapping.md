@@ -246,7 +246,9 @@ conflating mere disagreement, distinction, or chronology.
 
 `Proposition.axiom_status` is this library's promotion lifecycle: a
 proposition becomes an axiom only through a signed `promote` transition
-recorded in `axiom_history`, and may later be demoted or superseded. It says
+recorded in `axiom_history`, and may later be demoted (by `demote`, or by a
+reviewer's `override`) or superseded. A proposition that verification or a
+reviewer rejects before promotion moves to `demoted` through `reject`. It says
 who vouched for the proposition as settled, and when.
 
 folio-insights' `epistemic_status` (for example `hypothesis`) is a corpus-side
@@ -268,6 +270,7 @@ claiming that one opinion exercised every public surface.
 | `WORKING_TAXONOMY` | Label→optional-IRI mapping: four canonical FOLIO labels carry IRIs; six library-local types carry `None` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; `proposition_type` and `is_new_type` exercised |
 | `ActorRole` | Exercised: `court`; `plaintiff`; `appellant`; `party`; `both_parties`; `secondary_source` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)` |
 | `ActorRole` | Deferred: `defendant`; `appellee`; `petitioner`; `respondent`; `system` | `design-only` (no Palsgraf instance) |
+| `ActorRole` | Added in v0.5.0 for the `normative` shape: `legislature`; `agency` | `design-only` |
 | `AdjudicationMode` | `ruled`; `pro_forma`; `declined` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; all three modes exercised |
 | `Disposition` | `accepted`; `rejected`; `revised`; `unresolved`; `assumed-arguendo` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; all five exercised, including explicit `unresolved` |
 | `CitationEdgeType` | `supports`; `distinguishes`; `overrules`; `follows`; `cites_record_evidence`; `interprets`; `elaborates`; `cites` | `design-only` |
@@ -276,7 +279,7 @@ claiming that one opinion exercised every public surface.
 | `AdjudicatorRef` | `role`; `individual_id`; `name`; `mode` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; all three modes exercised |
 | `CitationEdge` | `edge_type`; `authority_individual_id`; `authority_text` | `design-only` (only tool-attached edges exercised; hand-added edges deferred) |
 | `PropositionShape` | Dataclass fields `name`; `expected_roles`; `description` | `design-only` |
-| `SHAPES` | `litigation`; `disputatio`, each mapped to a `PropositionShape` | `design-only` (`litigation` only; `disputatio` deferred) |
+| `SHAPES` | `litigation`; `disputatio`; `normative` (v0.5.0), each mapped to a `PropositionShape` | `design-only` (`litigation` only; `disputatio` and `normative` deferred) |
 | `Proposition` core | `id`; `start_char`; `end_char`; `text` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)` |
 | `Proposition` assertion/adjudication | `proposition_type`; `is_new_type`; `ActorRef`; validator including first-class `null`; `Disposition` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)` |
 | `Proposition.asserter` judicial-notice null case | first-class `null` asserter | `design-only` (no instance in Palsgraf) |
@@ -290,8 +293,10 @@ claiming that one opinion exercised every public surface.
 | `stamp_content_iris` | Copy of a record with `content_iri` computed for every proposition with text; requires `source_uri` | `implemented (v0.4.0; cross-product matching pending)` |
 | `CONTENT_IRI_PREFIX`; `ContentIdentity`; `content_identity`; `content_iri` | folio-insights shard IRI recipe: `(source_uri, span)` → IRI and full SHA-256 provenance hash | `implemented (v0.4.0; golden vectors from the folio-insights recipe)` |
 | `normalize_source_uri`; `normalize_span`; `document_source_uri` | Recipe normalizers; deterministic `urn:sha256:` URI for a document without a caller URI | `implemented (v0.4.0)` |
-| `AxiomAction` | `promote`; `demote`; `supersede`; `migrate` (migration-only) | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
-| `AXIOM_TRANSITIONS` | Read-only legal `(from, to)` → action table; `superseded` terminal | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
+| `conformance/` | Generated identity vectors and JSON Schemas for non-Python consumers (see [conformance](conformance.md)) | `implemented (v0.5.0; generated and drift-tested)` |
+| `AxiomAction` | `promote`; `demote`; `supersede`; `reject`; `override`; `migrate` (migration-only) | `implemented (v0.4.0: signed transitions; v0.5.0 adds `reject` and `override`; annotation evidence pending)` |
+| `AXIOM_TRANSITIONS` | Read-only legal `(from, to)` → default action table, including `proposition → demoted` (`reject`); `superseded` terminal | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
+| `AXIOM_TRANSITION_ACTIONS`; `REASON_REQUIRED_ACTIONS` | Read-only `(from, to)` → every legal action (adds `override` between `promoted` and `demoted`); actions that require a non-blank `reason` | `implemented (v0.5.0; annotation evidence pending)` |
 | `AxiomTransition`; `AxiomTransitionDraft`; `TransitionSignature` | `sequence`; `from_status`; `to_status`; `action`; `actor_did`; `at`; `reason`; `signature` (`algorithm`; `key_id`; `value`) | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
 | `apply_transition`; `verify_history`; `transition_signing_payload` | Checked, signature-verified status change (requires a stamped `content_iri`); history re-verification (`migrate` entries rejected unless `allow_legacy_migrate=True`); canonical JSON payload binding `proposition_id`, `content_iri` and `sequence` | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
 | `TransitionVerifier`; `IllegalAxiomTransition`; `AxiomSignatureError` | Verifier protocol and lifecycle errors | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |

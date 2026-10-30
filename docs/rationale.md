@@ -51,8 +51,25 @@ proposition and earns a lifecycle status through use and review. `AxiomStatus`
 therefore records `proposition`, `promoted`, `demoted`, or `superseded` on the
 same `Proposition` identity. Promotion does not discard provenance; demotion
 and supersession remain expressible without converting between unrelated
-types. Phase A does not exercise this lifecycle, so the field is expected to
+types. The transition's action records why the status changed: a `reject`
+demotes a proposition that never earned promotion, and an `override` records a
+reviewer overturning an automated status, so neither needs a status of its
+own. Phase A does not exercise this lifecycle, so the field is expected to
 remain design-only throughout Phase A.
+
+## Why normative text is a shape, not a second ledger
+
+Statutes, regulations, court rules, and holdings that state rules make
+propositions too: an enacting or issuing authority asserts a norm, and a court
+or an automated verifier confirms or rejects an encoding of it. The
+`normative` shape records that configuration with the same `Proposition`
+model, adding only the `legislature` and `agency` actor roles beside the
+existing `court` and `system`. The norm's own structure (its bearer,
+counterparty, conditions, and modality) belongs to the consumer that encodes
+it, such as lexplicit, not to the ledger's actor slots, which record who
+asserted and who validated the proposition.
+
+**Status:** `design-only` until a consumer records normative propositions.
 
 ## Why taxonomy augmentation is tag-then-batch
 

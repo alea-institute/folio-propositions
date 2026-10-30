@@ -2,8 +2,10 @@ import pytest
 from pydantic import ValidationError
 
 from folio_propositions import (
+    SHAPES,
     WORKING_TAXONOMY,
     ActorRef,
+    ActorRole,
     AdjudicatorRef,
     AxiomStatus,
     CitationEdge,
@@ -110,6 +112,48 @@ def test_registered_shapes_are_distinguishable_and_unknown_shape_is_rejected():
     assert litigation.shape != disputatio.shape
     with pytest.raises(ValidationError):
         proposition(shape="unknown-ontology")
+
+
+def test_normative_shape_registers_rule_issuing_and_verifying_roles():
+    normative = SHAPES["normative"]
+    assert normative.name == "normative"
+    assert normative.expected_roles == frozenset(
+        {ActorRole.LEGISLATURE, ActorRole.AGENCY, ActorRole.COURT, ActorRole.SYSTEM}
+    )
+    assert normative.expected_roles.isdisjoint(
+        SHAPES["litigation"].expected_roles - {ActorRole.COURT}
+    )
+    assert set(SHAPES) == {"litigation", "disputatio", "normative"}
+
+
+@pytest.mark.parametrize(
+    ("asserter", "validator"),
+    [
+        ({"role": "legislature", "name": "Minnesota Legislature"}, None),
+        (
+            {"role": "agency", "name": "Consumer Financial Protection Bureau"},
+            {"role": "system", "name": "lexplicit verification"},
+        ),
+        ({"role": "court", "name": "Minnesota Court of Appeals"}, {"role": "court"}),
+    ],
+)
+def test_normative_propositions_validate_and_round_trip(asserter, validator):
+    value = proposition(
+        shape="normative",
+        asserter=asserter,
+        validator=validator,
+        disposition="accepted" if validator else "unresolved",
+    )
+    assert value.shape == "normative"
+    assert value.asserter.role in SHAPES["normative"].expected_roles
+    assert_round_trip(value)
+
+
+def test_legislature_and_agency_roles_are_values_of_actor_role():
+    assert ActorRole("legislature") is ActorRole.LEGISLATURE
+    assert ActorRole("agency") is ActorRole.AGENCY
+    with pytest.raises(ValidationError):
+        proposition(asserter={"role": "senate"})
 
 
 def test_new_type_tag_is_verbatim_and_closed_taxonomy_is_enforced():

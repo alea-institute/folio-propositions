@@ -198,4 +198,4 @@ def test_core_import_works_without_cryptography():
         check=False,
     )
     assert result.returncode == 0, result.stderr
-    assert result.stdout.strip() == "ok 0.4.0"
+    assert result.stdout.strip() == "ok 0.5.0"

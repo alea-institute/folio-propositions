@@ -1,0 +1,788 @@
+{
+  "format": "folio-propositions/identity-vectors",
+  "format_version": 1,
+  "recipe": "folio-content-iri-v1",
+  "generated_by": "folio-propositions 0.5.0",
+  "generator": "scripts/generate_conformance.py",
+  "spec": {
+    "content_iri_prefix": "urn:folio:shard/",
+    "content_iri_hex_len": 32,
+    "document_uri_prefix": "urn:sha256:",
+    "steps": [
+      "source_uri must be non-empty (checked before normalization).",
+      "normalized_span: replace CRLF with LF, then lone CR with LF; apply Unicode NFC; strip leading and trailing characters for which Python str.isspace() is true (Unicode White_Space plus U+001C-U+001F). The result must be non-empty.",
+      "normalized_source_uri: split with Python urllib.parse.urlsplit (which first strips leading C0 controls and spaces and removes every tab, CR and LF); lowercase the scheme; NFC then lowercase the netloc; NFC the path then percent-encode it with urllib.parse.quote(safe='/%:@'), uppercase hex, UTF-8; drop trailing slashes unless the path is exactly '/'; NFC the query and fragment; reassemble with urlunsplit.",
+      "payload = UTF-8(normalized_source_uri + '\\n' + normalized_span).",
+      "provenance_hash = lowercase hex SHA-256(payload).",
+      "iri = content_iri_prefix + provenance_hash[:content_iri_hex_len].",
+      "document_source_uri(text) = document_uri_prefix + lowercase hex SHA-256(UTF-8(normalized_span(text))); text must normalize to non-empty."
+    ]
+  },
+  "content_identity": [
+    {
+      "id": "plain-ascii",
+      "description": "Plain ASCII source and span; no normalization applies.",
+      "input": {
+        "source_uri": "https://example.com/opinions/palsgraf",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f6f70696e696f6e732f70616c7367726166",
+        "span": "The risk reasonably to be perceived defines the duty to be obeyed.",
+        "span_utf8_hex": "546865207269736b20726561736f6e61626c7920746f2062652070657263656976656420646566696e657320746865206475747920746f206265206f62657965642e"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/opinions/palsgraf",
+        "normalized_span": "The risk reasonably to be perceived defines the duty to be obeyed.",
+        "normalized_span_utf8_hex": "546865207269736b20726561736f6e61626c7920746f2062652070657263656976656420646566696e657320746865206475747920746f206265206f62657965642e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f6f70696e696f6e732f70616c73677261660a546865207269736b20726561736f6e61626c7920746f2062652070657263656976656420646566696e657320746865206475747920746f206265206f62657965642e",
+        "provenance_hash": "60fd4827bbe451edea90e38b6735314d5d95bf6e29c9918a980d8f3169a34438",
+        "iri": "urn:folio:shard/60fd4827bbe451edea90e38b6735314d"
+      }
+    },
+    {
+      "id": "span-nfc",
+      "description": "Precomposed (NFC) span.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "caf\u00e9 holding",
+        "span_utf8_hex": "636166c3a920686f6c64696e67"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "caf\u00e9 holding",
+        "normalized_span_utf8_hex": "636166c3a920686f6c64696e67",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630a636166c3a920686f6c64696e67",
+        "provenance_hash": "1315ec9ff49c9c2ab78915eec9a9b62a68125bc5e455ce84fcb17da61d3ee54c",
+        "iri": "urn:folio:shard/1315ec9ff49c9c2ab78915eec9a9b62a"
+      }
+    },
+    {
+      "id": "span-nfd",
+      "description": "Decomposed (NFD) span; must equal span-nfc.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "cafe\u0301 holding",
+        "span_utf8_hex": "63616665cc8120686f6c64696e67"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "caf\u00e9 holding",
+        "normalized_span_utf8_hex": "636166c3a920686f6c64696e67",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630a636166c3a920686f6c64696e67",
+        "provenance_hash": "1315ec9ff49c9c2ab78915eec9a9b62a68125bc5e455ce84fcb17da61d3ee54c",
+        "iri": "urn:folio:shard/1315ec9ff49c9c2ab78915eec9a9b62a"
+      }
+    },
+    {
+      "id": "span-nfd-reordered-marks",
+      "description": "Combining marks in non-canonical order; NFC reorders and composes.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "s\u0307\u0323",
+        "span_utf8_hex": "73cc87cca3"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "\u1e69",
+        "normalized_span_utf8_hex": "e1b9a9",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630ae1b9a9",
+        "provenance_hash": "6db5a72a9a9aa366c42fc7ba6ed5dfc19fa396d5ce808677f972467b615e2fba",
+        "iri": "urn:folio:shard/6db5a72a9a9aa366c42fc7ba6ed5dfc1"
+      }
+    },
+    {
+      "id": "span-nfc-singleton",
+      "description": "U+212B ANGSTROM SIGN; NFC maps it to U+00C5.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "\u212b rule",
+        "span_utf8_hex": "e284ab2072756c65"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "\u00c5 rule",
+        "normalized_span_utf8_hex": "c3852072756c65",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630ac3852072756c65",
+        "provenance_hash": "eb038ca53eb5801316f96f7b50c395a5268f3500949b977b829623aa74641b26",
+        "iri": "urn:folio:shard/eb038ca53eb5801316f96f7b50c395a5"
+      }
+    },
+    {
+      "id": "span-compatibility-not-folded",
+      "description": "NFC, not NFKC: the U+FB01 ligature and full-width digits survive.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "\ufb01le \uff11\uff12",
+        "span_utf8_hex": "efac816c6520efbc91efbc92"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "\ufb01le \uff11\uff12",
+        "normalized_span_utf8_hex": "efac816c6520efbc91efbc92",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630aefac816c6520efbc91efbc92",
+        "provenance_hash": "b18fc75ab030878e0fb28b65e4a0f32668fba65493cd8a8a92b05f4971da370a",
+        "iri": "urn:folio:shard/b18fc75ab030878e0fb28b65e4a0f326"
+      }
+    },
+    {
+      "id": "span-crlf",
+      "description": "CRLF line endings become LF.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "line one\r\nline two",
+        "span_utf8_hex": "6c696e65206f6e650d0a6c696e652074776f"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "line one\nline two",
+        "normalized_span_utf8_hex": "6c696e65206f6e650a6c696e652074776f",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630a6c696e65206f6e650a6c696e652074776f",
+        "provenance_hash": "293c36cd655b6e86ca388f953c3190cf44e65fc9eb1b763b60f0cd67780e5e0f",
+        "iri": "urn:folio:shard/293c36cd655b6e86ca388f953c3190cf"
+      }
+    },
+    {
+      "id": "span-lone-cr",
+      "description": "A lone CR becomes LF.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "line one\rline two",
+        "span_utf8_hex": "6c696e65206f6e650d6c696e652074776f"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "line one\nline two",
+        "normalized_span_utf8_hex": "6c696e65206f6e650a6c696e652074776f",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630a6c696e65206f6e650a6c696e652074776f",
+        "provenance_hash": "293c36cd655b6e86ca388f953c3190cf44e65fc9eb1b763b60f0cd67780e5e0f",
+        "iri": "urn:folio:shard/293c36cd655b6e86ca388f953c3190cf"
+      }
+    },
+    {
+      "id": "span-cr-cr-lf",
+      "description": "CR CR LF becomes two LFs (CRLF is replaced before lone CR).",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "a\r\r\nb",
+        "span_utf8_hex": "610d0d0a62"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "a\n\nb",
+        "normalized_span_utf8_hex": "610a0a62",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630a610a0a62",
+        "provenance_hash": "0e7098782bb8d6bac275794ae306342487182c9cf098dc7b7fea930daf9bb36e",
+        "iri": "urn:folio:shard/0e7098782bb8d6bac275794ae3063424"
+      }
+    },
+    {
+      "id": "span-surrounding-ascii-whitespace",
+      "description": "Leading and trailing spaces, tabs and newlines are stripped.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": " \t\n padded span \r\n\t ",
+        "span_utf8_hex": "20090a20706164646564207370616e200d0a0920"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "padded span",
+        "normalized_span_utf8_hex": "706164646564207370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630a706164646564207370616e",
+        "provenance_hash": "a3bb531c78c793373fc2e3256318da582cfcd0e48838cfee8354deff0088a5b9",
+        "iri": "urn:folio:shard/a3bb531c78c793373fc2e3256318da58"
+      }
+    },
+    {
+      "id": "span-interior-whitespace-kept",
+      "description": "Interior runs of whitespace are kept verbatim.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "a  \t b\n\nc",
+        "span_utf8_hex": "6120200920620a0a63"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "a  \t b\n\nc",
+        "normalized_span_utf8_hex": "6120200920620a0a63",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630a6120200920620a0a63",
+        "provenance_hash": "807fb2c4be208a801ade5ea91358a169c571da65efebf83fb12df0c46f8a7851",
+        "iri": "urn:folio:shard/807fb2c4be208a801ade5ea91358a169"
+      }
+    },
+    {
+      "id": "span-surrounding-unicode-whitespace",
+      "description": "NBSP, NEL, ideographic space, line and paragraph separators are stripped (Unicode White_Space; Rust trim() agrees).",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "\u00a0\u0085\u3000\u2028span\u2029\u2003\u00a0",
+        "span_utf8_hex": "c2a0c285e38080e280a87370616ee280a9e28083c2a0"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630a7370616e",
+        "provenance_hash": "5cf42353ce439b2d52c664b670fdc4bc3ccbcd467ac986182255dea68512628a",
+        "iri": "urn:folio:shard/5cf42353ce439b2d52c664b670fdc4bc"
+      }
+    },
+    {
+      "id": "span-zero-width-and-bom-not-stripped",
+      "description": "U+200B and U+FEFF are not whitespace and are kept.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "\ufeff\u200bspan\u200b",
+        "span_utf8_hex": "efbbbfe2808b7370616ee2808b"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "\ufeff\u200bspan\u200b",
+        "normalized_span_utf8_hex": "efbbbfe2808b7370616ee2808b",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630aefbbbfe2808b7370616ee2808b",
+        "provenance_hash": "95950d1e7f85e135fc384e7c53983886ed4955fe818ea1bb5f19c00a416e7da9",
+        "iri": "urn:folio:shard/95950d1e7f85e135fc384e7c53983886"
+      }
+    },
+    {
+      "id": "span-leading-u001c",
+      "description": "U+001C FILE SEPARATOR is stripped by Python str.strip() but NOT by Rust str::trim(); a port must strip it.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "\u001cspan",
+        "span_utf8_hex": "1c7370616e"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630a7370616e",
+        "provenance_hash": "5cf42353ce439b2d52c664b670fdc4bc3ccbcd467ac986182255dea68512628a",
+        "iri": "urn:folio:shard/5cf42353ce439b2d52c664b670fdc4bc"
+      }
+    },
+    {
+      "id": "span-trailing-u001d",
+      "description": "U+001D GROUP SEPARATOR is stripped (Python strip, not Rust trim).",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "span\u001d",
+        "span_utf8_hex": "7370616e1d"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630a7370616e",
+        "provenance_hash": "5cf42353ce439b2d52c664b670fdc4bc3ccbcd467ac986182255dea68512628a",
+        "iri": "urn:folio:shard/5cf42353ce439b2d52c664b670fdc4bc"
+      }
+    },
+    {
+      "id": "span-surrounding-u001e",
+      "description": "U+001E RECORD SEPARATOR is stripped on both ends.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "\u001espan\u001e",
+        "span_utf8_hex": "1e7370616e1e"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630a7370616e",
+        "provenance_hash": "5cf42353ce439b2d52c664b670fdc4bc3ccbcd467ac986182255dea68512628a",
+        "iri": "urn:folio:shard/5cf42353ce439b2d52c664b670fdc4bc"
+      }
+    },
+    {
+      "id": "span-surrounding-u001f",
+      "description": "U+001F UNIT SEPARATOR is stripped on both ends.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "\u001fspan\u001f",
+        "span_utf8_hex": "1f7370616e1f"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630a7370616e",
+        "provenance_hash": "5cf42353ce439b2d52c664b670fdc4bc3ccbcd467ac986182255dea68512628a",
+        "iri": "urn:folio:shard/5cf42353ce439b2d52c664b670fdc4bc"
+      }
+    },
+    {
+      "id": "span-mixed-separators-and-spaces",
+      "description": "U+001C-U+001F mixed with ordinary whitespace are all stripped.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": " \u001c\t\u001d span \u001e\n\u001f ",
+        "span_utf8_hex": "201c091d207370616e201e0a1f20"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630a7370616e",
+        "provenance_hash": "5cf42353ce439b2d52c664b670fdc4bc3ccbcd467ac986182255dea68512628a",
+        "iri": "urn:folio:shard/5cf42353ce439b2d52c664b670fdc4bc"
+      }
+    },
+    {
+      "id": "span-interior-separators-kept",
+      "description": "U+001C-U+001F inside the span are kept.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "a\u001cb\u001dc\u001ed\u001fe",
+        "span_utf8_hex": "611c621d631e641f65"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "a\u001cb\u001dc\u001ed\u001fe",
+        "normalized_span_utf8_hex": "611c621d631e641f65",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630a611c621d631e641f65",
+        "provenance_hash": "79ba50a6ad2b03f8dd5e95fde04ebd5052bfc4771acf1cb539e0e2d994fe3ac5",
+        "iri": "urn:folio:shard/79ba50a6ad2b03f8dd5e95fde04ebd50"
+      }
+    },
+    {
+      "id": "span-other-c0-controls-not-stripped",
+      "description": "Other C0 controls (U+0000, U+0001, U+001B) are not whitespace and stay.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "\u0000\u0001span\u001b",
+        "span_utf8_hex": "00017370616e1b"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "\u0000\u0001span\u001b",
+        "normalized_span_utf8_hex": "00017370616e1b",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630a00017370616e1b",
+        "provenance_hash": "d3f0442948d91f22137a2e8560e84b15cb9a1049250c8bc7426f158457689adb",
+        "iri": "urn:folio:shard/d3f0442948d91f22137a2e8560e84b15"
+      }
+    },
+    {
+      "id": "span-vertical-tab-form-feed",
+      "description": "U+000B and U+000C are whitespace in both languages and are stripped.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "\u000b\fspan\f\u000b",
+        "span_utf8_hex": "0b0c7370616e0c0b"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630a7370616e",
+        "provenance_hash": "5cf42353ce439b2d52c664b670fdc4bc3ccbcd467ac986182255dea68512628a",
+        "iri": "urn:folio:shard/5cf42353ce439b2d52c664b670fdc4bc"
+      }
+    },
+    {
+      "id": "span-astral",
+      "description": "Characters outside the BMP hash as their UTF-8 bytes.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "\ud835\udcd0 \ud83d\ude00 \u00a7 504B.178",
+        "span_utf8_hex": "f09d939020f09f988020c2a720353034422e313738"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "\ud835\udcd0 \ud83d\ude00 \u00a7 504B.178",
+        "normalized_span_utf8_hex": "f09d939020f09f988020c2a720353034422e313738",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630af09d939020f09f988020c2a720353034422e313738",
+        "provenance_hash": "9d18c61984f1f57d5b0370e4c4833359d4f0f8afdbf924edd3c605ce0168347b",
+        "iri": "urn:folio:shard/9d18c61984f1f57d5b0370e4c4833359"
+      }
+    },
+    {
+      "id": "uri-scheme-and-host-case",
+      "description": "Scheme and host are lowercased; path case is kept.",
+      "input": {
+        "source_uri": "HTTPS://Example.COM/Doc",
+        "source_uri_utf8_hex": "48545450533a2f2f4578616d706c652e434f4d2f446f63",
+        "span": "span",
+        "span_utf8_hex": "7370616e"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/Doc",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f446f630a7370616e",
+        "provenance_hash": "a9397874d1d927468c8d16a3faf10eb16c872b6c93dd1c39c883c0df37ca8e4b",
+        "iri": "urn:folio:shard/a9397874d1d927468c8d16a3faf10eb1"
+      }
+    },
+    {
+      "id": "uri-trailing-slash",
+      "description": "A trailing slash on a non-root path is removed.",
+      "input": {
+        "source_uri": "https://example.com/a/",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f612f",
+        "span": "span",
+        "span_utf8_hex": "7370616e"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/a",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f610a7370616e",
+        "provenance_hash": "a8dbb9ced1285df6655fc050e4fa164bfcb10c6a2782987674443db26cd45a47",
+        "iri": "urn:folio:shard/a8dbb9ced1285df6655fc050e4fa164b"
+      }
+    },
+    {
+      "id": "uri-multiple-trailing-slashes",
+      "description": "All trailing slashes on a non-root path are removed.",
+      "input": {
+        "source_uri": "https://example.com/a///",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f612f2f2f",
+        "span": "span",
+        "span_utf8_hex": "7370616e"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/a",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f610a7370616e",
+        "provenance_hash": "a8dbb9ced1285df6655fc050e4fa164bfcb10c6a2782987674443db26cd45a47",
+        "iri": "urn:folio:shard/a8dbb9ced1285df6655fc050e4fa164b"
+      }
+    },
+    {
+      "id": "uri-root-slash-kept",
+      "description": "The root path '/' is kept.",
+      "input": {
+        "source_uri": "https://example.com/",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f",
+        "span": "span",
+        "span_utf8_hex": "7370616e"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f0a7370616e",
+        "provenance_hash": "dc190904f57b7f5ef90842d7a72248e459b092ef29cd9b82fee526843bc1ef5c",
+        "iri": "urn:folio:shard/dc190904f57b7f5ef90842d7a72248e4"
+      }
+    },
+    {
+      "id": "uri-path-nfc",
+      "description": "A precomposed non-ASCII path is NFC-normalized, then percent-encoded.",
+      "input": {
+        "source_uri": "https://example.com/caf\u00e9",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f636166c3a9",
+        "span": "span",
+        "span_utf8_hex": "7370616e"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/caf%C3%A9",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f6361662543332541390a7370616e",
+        "provenance_hash": "9b76e0ee402e98b4a5ca4dfc6229913d0405dc045e186482140bf9b423dd8cb5",
+        "iri": "urn:folio:shard/9b76e0ee402e98b4a5ca4dfc6229913d"
+      }
+    },
+    {
+      "id": "uri-path-nfd",
+      "description": "A decomposed non-ASCII path; must equal uri-path-nfc.",
+      "input": {
+        "source_uri": "https://example.com/cafe\u0301",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f63616665cc81",
+        "span": "span",
+        "span_utf8_hex": "7370616e"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/caf%C3%A9",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f6361662543332541390a7370616e",
+        "provenance_hash": "9b76e0ee402e98b4a5ca4dfc6229913d0405dc045e186482140bf9b423dd8cb5",
+        "iri": "urn:folio:shard/9b76e0ee402e98b4a5ca4dfc6229913d"
+      }
+    },
+    {
+      "id": "uri-existing-percent-escapes-kept",
+      "description": "Existing percent escapes are kept verbatim, including lowercase hex.",
+      "input": {
+        "source_uri": "https://example.com/caf%c3%a9/a%2Fb",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f6361662563332561392f6125324662",
+        "span": "span",
+        "span_utf8_hex": "7370616e"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/caf%c3%a9/a%2Fb",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f6361662563332561392f61253246620a7370616e",
+        "provenance_hash": "fd64f28a9b5e977f954e941ac4bd2c3ef8470abe8eb85a8f635fd63c61bac2f0",
+        "iri": "urn:folio:shard/fd64f28a9b5e977f954e941ac4bd2c3e"
+      }
+    },
+    {
+      "id": "uri-path-space-and-reserved",
+      "description": "In the path only unreserved characters and '/', '%', ':' and '@' stay literal; space and other reserved characters are percent-encoded.",
+      "input": {
+        "source_uri": "https://example.com/a b;c=d,e+f!g~h",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f6120623b633d642c652b6621677e68",
+        "span": "span",
+        "span_utf8_hex": "7370616e"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/a%20b%3Bc%3Dd%2Ce%2Bf%21g~h",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f612532306225334263253344642532436525324266253231677e680a7370616e",
+        "provenance_hash": "d9b8298cf23f37d0e4b9386683fe7fe8065577c0f1b5f7ee266a55ebffd1006a",
+        "iri": "urn:folio:shard/d9b8298cf23f37d0e4b9386683fe7fe8"
+      }
+    },
+    {
+      "id": "uri-query-and-fragment-kept",
+      "description": "Query and fragment are kept (NFC only, not lowercased or encoded).",
+      "input": {
+        "source_uri": "https://example.com/doc?Page=2&q=cafe\u0301#Para-7",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f633f506167653d3226713d63616665cc8123506172612d37",
+        "span": "span",
+        "span_utf8_hex": "7370616e"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc?Page=2&q=caf\u00e9#Para-7",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f633f506167653d3226713d636166c3a923506172612d370a7370616e",
+        "provenance_hash": "b6b76050a579e699c97f85ad9a965b2ea8e2132bc45313fb4c5d841a394911f2",
+        "iri": "urn:folio:shard/b6b76050a579e699c97f85ad9a965b2e"
+      }
+    },
+    {
+      "id": "uri-host-nfc",
+      "description": "A non-ASCII host is NFC-normalized and lowercased, not IDNA-encoded.",
+      "input": {
+        "source_uri": "https://CAFE\u0301.example/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f43414645cc812e6578616d706c652f646f63",
+        "span": "span",
+        "span_utf8_hex": "7370616e"
+      },
+      "expected": {
+        "normalized_source_uri": "https://caf\u00e9.example/doc",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f636166c3a92e6578616d706c652f646f630a7370616e",
+        "provenance_hash": "db9eb48225c19e0db4fe497f19dd1d91a8be3e7983c1e6e732b255103929fd85",
+        "iri": "urn:folio:shard/db9eb48225c19e0db4fe497f19dd1d91"
+      }
+    },
+    {
+      "id": "uri-userinfo-and-port",
+      "description": "Userinfo and port are part of the lowercased netloc.",
+      "input": {
+        "source_uri": "https://User:Pass@Example.com:8443/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f557365723a50617373404578616d706c652e636f6d3a383434332f646f63",
+        "span": "span",
+        "span_utf8_hex": "7370616e"
+      },
+      "expected": {
+        "normalized_source_uri": "https://user:pass@example.com:8443/doc",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f757365723a70617373406578616d706c652e636f6d3a383434332f646f630a7370616e",
+        "provenance_hash": "4cb12ff264422986174d61ab43722c29d256b2b5e9988838f81dc8ffa35f78b8",
+        "iri": "urn:folio:shard/4cb12ff264422986174d61ab43722c29"
+      }
+    },
+    {
+      "id": "uri-urn",
+      "description": "A URN has no netloc; its body is the path.",
+      "input": {
+        "source_uri": "urn:sha256:ABC123",
+        "source_uri_utf8_hex": "75726e3a7368613235363a414243313233",
+        "span": "span",
+        "span_utf8_hex": "7370616e"
+      },
+      "expected": {
+        "normalized_source_uri": "urn:sha256:ABC123",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "75726e3a7368613235363a4142433132330a7370616e",
+        "provenance_hash": "02a4f29e2b5afa3a97c059710239fbdff98eb61408b3da7c9933d7362ecac23f",
+        "iri": "urn:folio:shard/02a4f29e2b5afa3a97c059710239fbdf"
+      }
+    },
+    {
+      "id": "uri-leading-space-and-c0-stripped",
+      "description": "Python urlsplit (WHATWG) strips leading C0 controls and spaces.",
+      "input": {
+        "source_uri": " \u001f\u0001https://example.com/doc",
+        "source_uri_utf8_hex": "201f0168747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "span",
+        "span_utf8_hex": "7370616e"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630a7370616e",
+        "provenance_hash": "5cf42353ce439b2d52c664b670fdc4bc3ccbcd467ac986182255dea68512628a",
+        "iri": "urn:folio:shard/5cf42353ce439b2d52c664b670fdc4bc"
+      }
+    },
+    {
+      "id": "uri-tab-and-newline-removed",
+      "description": "Python urlsplit removes every tab, CR and LF anywhere in the URI.",
+      "input": {
+        "source_uri": "https://exa\tmple.com/d\noc\r",
+        "source_uri_utf8_hex": "68747470733a2f2f657861096d706c652e636f6d2f640a6f630d",
+        "span": "span",
+        "span_utf8_hex": "7370616e"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f630a7370616e",
+        "provenance_hash": "5cf42353ce439b2d52c664b670fdc4bc3ccbcd467ac986182255dea68512628a",
+        "iri": "urn:folio:shard/5cf42353ce439b2d52c664b670fdc4bc"
+      }
+    },
+    {
+      "id": "uri-trailing-space-encoded",
+      "description": "Trailing spaces are not stripped; they percent-encode as %20.",
+      "input": {
+        "source_uri": "https://example.com/doc ",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f6320",
+        "span": "span",
+        "span_utf8_hex": "7370616e"
+      },
+      "expected": {
+        "normalized_source_uri": "https://example.com/doc%20",
+        "normalized_span": "span",
+        "normalized_span_utf8_hex": "7370616e",
+        "payload_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f632532300a7370616e",
+        "provenance_hash": "d8a50d7306a0652c0bd9a3a61a037b108f7a0b7851a9c678d12b61517a421ea0",
+        "iri": "urn:folio:shard/d8a50d7306a0652c0bd9a3a61a037b10"
+      }
+    }
+  ],
+  "content_identity_errors": [
+    {
+      "id": "error-empty-source-uri",
+      "description": "An empty source URI is refused.",
+      "input": {
+        "source_uri": "",
+        "source_uri_utf8_hex": "",
+        "span": "span",
+        "span_utf8_hex": "7370616e"
+      },
+      "expected": {
+        "error": "ValueError",
+        "message": "source_uri must be a non-empty string"
+      }
+    },
+    {
+      "id": "error-empty-span",
+      "description": "An empty span is refused.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "",
+        "span_utf8_hex": ""
+      },
+      "expected": {
+        "error": "ValueError",
+        "message": "span must not normalize to an empty string"
+      }
+    },
+    {
+      "id": "error-whitespace-only-span",
+      "description": "A span that normalizes to empty is refused.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": " \r\n\t\u3000 ",
+        "span_utf8_hex": "200d0a09e3808020"
+      },
+      "expected": {
+        "error": "ValueError",
+        "message": "span must not normalize to an empty string"
+      }
+    },
+    {
+      "id": "error-separators-only-span",
+      "description": "A span of only U+001C-U+001F normalizes to empty and is refused; a port using Rust trim() would wrongly mint an IRI.",
+      "input": {
+        "source_uri": "https://example.com/doc",
+        "source_uri_utf8_hex": "68747470733a2f2f6578616d706c652e636f6d2f646f63",
+        "span": "\u001c\u001d\u001e\u001f",
+        "span_utf8_hex": "1c1d1e1f"
+      },
+      "expected": {
+        "error": "ValueError",
+        "message": "span must not normalize to an empty string"
+      }
+    }
+  ],
+  "document_source_uri": [
+    {
+      "id": "doc-plain",
+      "description": "Plain ASCII document text.",
+      "input": {
+        "text": "Opinion text",
+        "text_utf8_hex": "4f70696e696f6e2074657874"
+      },
+      "expected": {
+        "normalized_text": "Opinion text",
+        "normalized_text_utf8_hex": "4f70696e696f6e2074657874",
+        "uri": "urn:sha256:8ed6aa541f085be110426fa3b456f2dfcea33e5dd15462d8cec18c7289a77686"
+      }
+    },
+    {
+      "id": "doc-crlf-and-padding",
+      "description": "Document text uses the span normalization (LF, NFC, strip).",
+      "input": {
+        "text": "  Opinion text\r\nsecond line\u001f ",
+        "text_utf8_hex": "20204f70696e696f6e20746578740d0a7365636f6e64206c696e651f20"
+      },
+      "expected": {
+        "normalized_text": "Opinion text\nsecond line",
+        "normalized_text_utf8_hex": "4f70696e696f6e20746578740a7365636f6e64206c696e65",
+        "uri": "urn:sha256:1e2fd6b76c33a92ef89bba309cf6ada5fdbb742c2382fcf7dedce570cdf8c8f3"
+      }
+    },
+    {
+      "id": "doc-nfd",
+      "description": "Decomposed text hashes as its NFC form.",
+      "input": {
+        "text": "cafe\u0301 opinion",
+        "text_utf8_hex": "63616665cc81206f70696e696f6e"
+      },
+      "expected": {
+        "normalized_text": "caf\u00e9 opinion",
+        "normalized_text_utf8_hex": "636166c3a9206f70696e696f6e",
+        "uri": "urn:sha256:fab7b3eec32ce93651be56bea41211f068c7c9408275579b228a633035103845"
+      }
+    }
+  ]
+}
