@@ -49,7 +49,7 @@ from .models import (
 )
 from .signing import DidKeyEd25519Verifier, did_key_from_public_bytes, sign_transition
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 __all__ = [
     "AXIOM_TRANSITIONS",

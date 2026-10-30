@@ -246,7 +246,9 @@ conflating mere disagreement, distinction, or chronology.
 
 `Proposition.axiom_status` is this library's promotion lifecycle: a
 proposition becomes an axiom only through a signed `promote` transition
-recorded in `axiom_history`, and may later be demoted or superseded. It says
+recorded in `axiom_history`, and may later be demoted (by `demote`, or by a
+reviewer's `override`) or superseded. A proposition that verification or a
+reviewer rejects before promotion moves to `demoted` through `reject`. It says
 who vouched for the proposition as settled, and when.
 
 folio-insights' `epistemic_status` (for example `hypothesis`) is a corpus-side
@@ -290,8 +292,10 @@ claiming that one opinion exercised every public surface.
 | `stamp_content_iris` | Copy of a record with `content_iri` computed for every proposition with text; requires `source_uri` | `implemented (v0.4.0; cross-product matching pending)` |
 | `CONTENT_IRI_PREFIX`; `ContentIdentity`; `content_identity`; `content_iri` | folio-insights shard IRI recipe: `(source_uri, span)` → IRI and full SHA-256 provenance hash | `implemented (v0.4.0; golden vectors from the folio-insights recipe)` |
 | `normalize_source_uri`; `normalize_span`; `document_source_uri` | Recipe normalizers; deterministic `urn:sha256:` URI for a document without a caller URI | `implemented (v0.4.0)` |
-| `AxiomAction` | `promote`; `demote`; `supersede`; `migrate` (migration-only) | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
-| `AXIOM_TRANSITIONS` | Read-only legal `(from, to)` → action table; `superseded` terminal | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
+| `conformance/` | Generated identity vectors and JSON Schemas for non-Python consumers (see [conformance](conformance.md)) | `implemented (v0.5.0; generated and drift-tested)` |
+| `AxiomAction` | `promote`; `demote`; `supersede`; `reject`; `override`; `migrate` (migration-only) | `implemented (v0.4.0: signed transitions; v0.5.0 adds `reject` and `override`; annotation evidence pending)` |
+| `AXIOM_TRANSITIONS` | Read-only legal `(from, to)` → default action table, including `proposition → demoted` (`reject`); `superseded` terminal | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
+| `AXIOM_TRANSITION_ACTIONS`; `REASON_REQUIRED_ACTIONS` | Read-only `(from, to)` → every legal action (adds `override` between `promoted` and `demoted`); actions that require a non-blank `reason` | `implemented (v0.5.0; annotation evidence pending)` |
 | `AxiomTransition`; `AxiomTransitionDraft`; `TransitionSignature` | `sequence`; `from_status`; `to_status`; `action`; `actor_did`; `at`; `reason`; `signature` (`algorithm`; `key_id`; `value`) | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
 | `apply_transition`; `verify_history`; `transition_signing_payload` | Checked, signature-verified status change (requires a stamped `content_iri`); history re-verification (`migrate` entries rejected unless `allow_legacy_migrate=True`); canonical JSON payload binding `proposition_id`, `content_iri` and `sequence` | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |
 | `TransitionVerifier`; `IllegalAxiomTransition`; `AxiomSignatureError` | Verifier protocol and lifecycle errors | `implemented (v0.4.0: signed transitions; annotation evidence pending)` |

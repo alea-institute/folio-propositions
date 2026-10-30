@@ -3,7 +3,7 @@
   "$id": "urn:folio-propositions:schema:document-record:v4",
   "title": "PropositionDocumentRecord",
   "x-folio-schema-version": 4,
-  "x-folio-generated-by": "folio-propositions 0.4.0",
+  "x-folio-generated-by": "folio-propositions 0.5.0",
   "x-folio-invariants": [
     "Every proposition's schema_version equals the record's.",
     "When source_uri is set, every proposition with text and content_iri has content_iri == content_iri(source_uri, text), and its text is non-empty after normalization.",

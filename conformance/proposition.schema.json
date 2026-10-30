@@ -3,7 +3,7 @@
   "$id": "urn:folio-propositions:schema:proposition:v4",
   "title": "Proposition",
   "x-folio-schema-version": 4,
-  "x-folio-generated-by": "folio-propositions 0.4.0",
+  "x-folio-generated-by": "folio-propositions 0.5.0",
   "x-folio-invariants": [
     "start_char, end_char and text are all null or all non-null.",
     "end_char >= start_char when both are set.",

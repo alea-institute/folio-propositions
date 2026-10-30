@@ -44,14 +44,29 @@ URI when a document has none.
 ## Axiom lifecycle
 
 `axiom_status` changes only through `apply_transition`, which checks the legal
-transition table (`proposition → promoted ⇄ demoted`, any of them →
-`superseded`, which is terminal) and verifies the actor's signature. Every
+transition table (`proposition → promoted ⇄ demoted`, `proposition → demoted`
+by `reject`, any of them → `superseded`, which is terminal) and verifies the
+actor's signature. Between `promoted` and `demoted` an authorized person may
+use `override` instead of `demote` or `promote` to record that they overturned
+an automated status; `reject` and `override` require a `reason`. Every
 change is appended to `axiom_history` with its sequence number, and the
 signature binds the proposition id, its stamped `content_iri` and that sequence.
 A `did:key` signature is self-certifying, so check `actor_did` against your own
 authorized signers. Install
 `folio-propositions[signing]` for the `did:key` Ed25519 verifier and the
-`sign_transition` helper. See the [v0.4.0 migration notes](docs/migration-0.4.0.md).
+`sign_transition` helper. See the [v0.5.0](docs/migration-0.5.0.md) and
+[v0.4.0](docs/migration-0.4.0.md) migration notes.
+
+## Conformance files for other languages
+
+`conformance/identity-vectors.json` holds content-identity vectors with every
+intermediate value (normalized URI and span, hashed payload bytes, provenance
+hash, IRI), so a port in another language can check each step of the recipe.
+`conformance/proposition.schema.json` and
+`conformance/document-record.schema.json` are JSON Schemas (draft 2020-12)
+generated from the pydantic models. `scripts/generate_conformance.py` writes
+all three, and the test suite fails if they drift from the implementation. See
+[conformance](docs/conformance.md).
 
 ## Development checks
 
@@ -63,6 +78,7 @@ uv pip install --python .venv/bin/python -e '.[dev,signing]'
 .venv/bin/pytest -q
 .venv/bin/ruff check .
 .venv/bin/mypy src
+.venv/bin/python scripts/generate_conformance.py --check
 ```
 
 CI runs these checks on Python 3.11, 3.12, and 3.13. A separate job installs

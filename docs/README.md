@@ -4,6 +4,8 @@
 - [Ledger rationale](rationale.md) — living review document explaining the model, adoption boundary, and falsification criteria.
 - [FOLIO taxonomy alignment](folio-taxonomy-alignment.md) — top-down inventory, bottom-up mapping, and the approved v0.3.0 metadata alignment.
 - [v0.3.0 migration](migration-0.3.0.md) — canonical label rewrites, FOLIO IRIs, and consumer migration guidance.
+- [Conformance files](conformance.md) — generated content-identity vectors and normative JSON Schemas for consumers in other languages.
+- [v0.5.0 migration](migration-0.5.0.md) — `reject` and `override` lifecycle actions, the LICENSE file, and the conformance files.
 - [v0.4.0 migration](migration-0.4.0.md) — shared content identity (`content_iri`, record `source_uri`), signed axiom lifecycle, and `SCHEMA_VERSION` 4.
 - [Review disposition](review-disposition.md) — template for recording the folio-insights v2.0 packet decision (R18).
 - [Review disposition v2.0 (draft)](review-disposition-v2.0.md) — drafted record awaiting Damien's confirmation.

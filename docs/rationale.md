@@ -51,7 +51,10 @@ proposition and earns a lifecycle status through use and review. `AxiomStatus`
 therefore records `proposition`, `promoted`, `demoted`, or `superseded` on the
 same `Proposition` identity. Promotion does not discard provenance; demotion
 and supersession remain expressible without converting between unrelated
-types. Phase A does not exercise this lifecycle, so the field is expected to
+types. The transition's action records why the status changed: a `reject`
+demotes a proposition that never earned promotion, and an `override` records a
+reviewer overturning an automated status, so neither needs a status of its
+own. Phase A does not exercise this lifecycle, so the field is expected to
 remain design-only throughout Phase A.
 
 ## Why taxonomy augmentation is tag-then-batch
