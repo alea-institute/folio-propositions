@@ -1,0 +1,509 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:folio-propositions:schema:document-record:v4",
+  "title": "PropositionDocumentRecord",
+  "x-folio-schema-version": 4,
+  "x-folio-generated-by": "folio-propositions 0.4.0",
+  "x-folio-invariants": [
+    "Every proposition's schema_version equals the record's.",
+    "When source_uri is set, every proposition with text and content_iri has content_iri == content_iri(source_uri, text), and its text is non-empty after normalization.",
+    "Each proposition satisfies the Proposition invariants."
+  ],
+  "$defs": {
+    "ActorRef": {
+      "properties": {
+        "role": {
+          "$ref": "#/$defs/ActorRole"
+        },
+        "individual_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Individual Id"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "assumed": {
+          "default": false,
+          "title": "Assumed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "role"
+      ],
+      "title": "ActorRef",
+      "type": "object"
+    },
+    "ActorRole": {
+      "enum": [
+        "party",
+        "plaintiff",
+        "defendant",
+        "appellant",
+        "appellee",
+        "petitioner",
+        "respondent",
+        "both_parties",
+        "court",
+        "secondary_source",
+        "system"
+      ],
+      "title": "ActorRole",
+      "type": "string"
+    },
+    "AdjudicationMode": {
+      "enum": [
+        "ruled",
+        "pro_forma",
+        "declined"
+      ],
+      "title": "AdjudicationMode",
+      "type": "string"
+    },
+    "AdjudicatorRef": {
+      "properties": {
+        "role": {
+          "$ref": "#/$defs/ActorRole"
+        },
+        "individual_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Individual Id"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "mode": {
+          "$ref": "#/$defs/AdjudicationMode",
+          "default": "ruled"
+        }
+      },
+      "required": [
+        "role"
+      ],
+      "title": "AdjudicatorRef",
+      "type": "object"
+    },
+    "AxiomAction": {
+      "enum": [
+        "promote",
+        "demote",
+        "supersede",
+        "reject",
+        "override",
+        "migrate"
+      ],
+      "title": "AxiomAction",
+      "type": "string"
+    },
+    "AxiomStatus": {
+      "enum": [
+        "proposition",
+        "promoted",
+        "demoted",
+        "superseded"
+      ],
+      "title": "AxiomStatus",
+      "type": "string"
+    },
+    "AxiomTransition": {
+      "description": "One recorded, signed (or legacy ``migrate``) status change.",
+      "properties": {
+        "sequence": {
+          "minimum": 0,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "from_status": {
+          "$ref": "#/$defs/AxiomStatus"
+        },
+        "to_status": {
+          "$ref": "#/$defs/AxiomStatus"
+        },
+        "action": {
+          "$ref": "#/$defs/AxiomAction"
+        },
+        "actor_did": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Actor Did"
+        },
+        "at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "At"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "signature": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TransitionSignature"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "sequence",
+        "from_status",
+        "to_status",
+        "action",
+        "actor_did",
+        "at"
+      ],
+      "title": "AxiomTransition",
+      "type": "object"
+    },
+    "CitationEdge": {
+      "properties": {
+        "edge_type": {
+          "$ref": "#/$defs/CitationEdgeType"
+        },
+        "authority_individual_id": {
+          "title": "Authority Individual Id",
+          "type": "string"
+        },
+        "authority_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Authority Text"
+        }
+      },
+      "required": [
+        "edge_type",
+        "authority_individual_id"
+      ],
+      "title": "CitationEdge",
+      "type": "object"
+    },
+    "CitationEdgeType": {
+      "enum": [
+        "supports",
+        "distinguishes",
+        "overrules",
+        "follows",
+        "cites_record_evidence",
+        "interprets",
+        "elaborates",
+        "cites"
+      ],
+      "title": "CitationEdgeType",
+      "type": "string"
+    },
+    "Disposition": {
+      "enum": [
+        "accepted",
+        "rejected",
+        "revised",
+        "unresolved",
+        "assumed-arguendo"
+      ],
+      "title": "Disposition",
+      "type": "string"
+    },
+    "GeneratorInfo": {
+      "properties": {
+        "tool": {
+          "title": "Tool",
+          "type": "string"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool",
+        "version"
+      ],
+      "title": "GeneratorInfo",
+      "type": "object"
+    },
+    "Proposition": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "default": 4,
+          "minimum": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "start_char": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Char"
+        },
+        "end_char": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Char"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        },
+        "proposition_type": {
+          "title": "Proposition Type",
+          "type": "string"
+        },
+        "is_new_type": {
+          "default": false,
+          "title": "Is New Type",
+          "type": "boolean"
+        },
+        "asserter": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ActorRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "validator": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AdjudicatorRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disposition": {
+          "$ref": "#/$defs/Disposition"
+        },
+        "citation_edges": {
+          "items": {
+            "$ref": "#/$defs/CitationEdge"
+          },
+          "title": "Citation Edges",
+          "type": "array"
+        },
+        "triple_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Triple Ids",
+          "type": "array"
+        },
+        "shape": {
+          "default": "litigation",
+          "title": "Shape",
+          "type": "string"
+        },
+        "axiom_status": {
+          "$ref": "#/$defs/AxiomStatus",
+          "default": "proposition"
+        },
+        "content_iri": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "pattern": "^urn:folio:shard/[0-9a-f]{32}$",
+          "title": "Content Iri"
+        },
+        "axiom_history": {
+          "items": {
+            "$ref": "#/$defs/AxiomTransition"
+          },
+          "title": "Axiom History",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "proposition_type",
+        "asserter",
+        "validator",
+        "disposition"
+      ],
+      "title": "Proposition",
+      "type": "object"
+    },
+    "TransitionSignature": {
+      "properties": {
+        "algorithm": {
+          "const": "ed25519",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "key_id": {
+          "title": "Key Id",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "algorithm",
+        "key_id",
+        "value"
+      ],
+      "title": "TransitionSignature",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "document_id": {
+      "title": "Document Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": 4,
+      "minimum": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "propositions": {
+      "items": {
+        "$ref": "#/$defs/Proposition"
+      },
+      "title": "Propositions",
+      "type": "array"
+    },
+    "document_metadata": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Document Metadata"
+    },
+    "generator": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/GeneratorInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "source_uri": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Uri"
+    }
+  },
+  "required": [
+    "document_id"
+  ],
+  "type": "object"
+}
