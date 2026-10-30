@@ -18,7 +18,9 @@ from .interchange import (
     stamp_content_iris,
 )
 from .lifecycle import (
+    AXIOM_TRANSITION_ACTIONS,
     AXIOM_TRANSITIONS,
+    REASON_REQUIRED_ACTIONS,
     AxiomAction,
     AxiomSignatureError,
     AxiomTransition,
@@ -51,8 +53,10 @@ __version__ = "0.4.0"
 
 __all__ = [
     "AXIOM_TRANSITIONS",
+    "AXIOM_TRANSITION_ACTIONS",
     "CONTENT_IRI_PREFIX",
     "MIGRATIONS",
+    "REASON_REQUIRED_ACTIONS",
     "SCHEMA_VERSION",
     "SHAPES",
     "WORKING_TAXONOMY",
