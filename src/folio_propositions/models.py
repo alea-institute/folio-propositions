@@ -58,6 +58,8 @@ class ActorRole(str, Enum):
     COURT = "court"
     SECONDARY_SOURCE = "secondary_source"
     SYSTEM = "system"
+    LEGISLATURE = "legislature"
+    AGENCY = "agency"
 
 
 class AdjudicationMode(str, Enum):
@@ -138,6 +140,22 @@ SHAPES: dict[str, PropositionShape] = {
             {ActorRole.PARTY, ActorRole.SECONDARY_SOURCE, ActorRole.SYSTEM}
         ),
         description="Dialectical proposition and response configuration.",
+    ),
+    "normative": PropositionShape(
+        name="normative",
+        expected_roles=frozenset(
+            {
+                ActorRole.LEGISLATURE,
+                ActorRole.AGENCY,
+                ActorRole.COURT,
+                ActorRole.SYSTEM,
+            }
+        ),
+        description=(
+            "Normative legal text: statutes, regulations, court rules, and "
+            "holdings that state rules. The asserter is the enacting or issuing "
+            "authority; the validator is a court or an automated verifier."
+        ),
     ),
 }
 

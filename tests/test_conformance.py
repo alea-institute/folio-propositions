@@ -12,6 +12,7 @@ from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 
 from folio_propositions import (
+    ActorRole,
     AxiomAction,
     AxiomStatus,
     Proposition,
@@ -204,6 +205,8 @@ def test_schema_enums_match_python_enums():
     assert defs["AxiomAction"]["enum"] == [member.value for member in AxiomAction]
     assert defs["AxiomStatus"]["enum"] == [member.value for member in AxiomStatus]
     assert {"reject", "override"} <= set(defs["AxiomAction"]["enum"])
+    assert defs["ActorRole"]["enum"] == [member.value for member in ActorRole]
+    assert {"legislature", "agency"} <= set(defs["ActorRole"]["enum"])
 
 
 def _sample(**overrides) -> dict:
@@ -271,7 +274,7 @@ def test_model_dumps_validate_against_the_schema():
         {"axiom_status": "rejected"},
         {"content_iri": "urn:folio:shard/NOT-HEX"},
         {"content_iri": "urn:folio:shard/" + "a" * 31},
-        {"asserter": {"role": "legislature"}},
+        {"asserter": {"role": "senate"}},
         {"start_char": -1},
         {"id": None},
     ],

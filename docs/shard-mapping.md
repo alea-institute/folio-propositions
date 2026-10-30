@@ -270,6 +270,7 @@ claiming that one opinion exercised every public surface.
 | `WORKING_TAXONOMY` | Label→optional-IRI mapping: four canonical FOLIO labels carry IRIs; six library-local types carry `None` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; `proposition_type` and `is_new_type` exercised |
 | `ActorRole` | Exercised: `court`; `plaintiff`; `appellant`; `party`; `both_parties`; `secondary_source` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)` |
 | `ActorRole` | Deferred: `defendant`; `appellee`; `petitioner`; `respondent`; `system` | `design-only` (no Palsgraf instance) |
+| `ActorRole` | Added in v0.5.0 for the `normative` shape: `legislature`; `agency` | `design-only` |
 | `AdjudicationMode` | `ruled`; `pro_forma`; `declined` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; all three modes exercised |
 | `Disposition` | `accepted`; `rejected`; `revised`; `unresolved`; `assumed-arguendo` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; all five exercised, including explicit `unresolved` |
 | `CitationEdgeType` | `supports`; `distinguishes`; `overrules`; `follows`; `cites_record_evidence`; `interprets`; `elaborates`; `cites` | `design-only` |
@@ -278,7 +279,7 @@ claiming that one opinion exercised every public surface.
 | `AdjudicatorRef` | `role`; `individual_id`; `name`; `mode` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)`; all three modes exercised |
 | `CitationEdge` | `edge_type`; `authority_individual_id`; `authority_text` | `design-only` (only tool-attached edges exercised; hand-added edges deferred) |
 | `PropositionShape` | Dataclass fields `name`; `expected_roles`; `description` | `design-only` |
-| `SHAPES` | `litigation`; `disputatio`, each mapped to a `PropositionShape` | `design-only` (`litigation` only; `disputatio` deferred) |
+| `SHAPES` | `litigation`; `disputatio`; `normative` (v0.5.0), each mapped to a `PropositionShape` | `design-only` (`litigation` only; `disputatio` and `normative` deferred) |
 | `Proposition` core | `id`; `start_char`; `end_char`; `text` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)` |
 | `Proposition` assertion/adjudication | `proposition_type`; `is_new_type`; `ActorRef`; validator including first-class `null`; `Disposition` | `annotation-tested (cycle 1: Palsgraf, AI-annotated, Damien-delegated)` |
 | `Proposition.asserter` judicial-notice null case | first-class `null` asserter | `design-only` (no instance in Palsgraf) |

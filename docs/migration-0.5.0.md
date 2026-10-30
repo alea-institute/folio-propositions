@@ -1,6 +1,7 @@
 # Migrating to v0.5.0
 
-v0.5.0 adds two lifecycle actions, `reject` and `override`, publishes
+v0.5.0 adds a `normative` proposition shape with two actor roles, two
+lifecycle actions, `reject` and `override`, publishes
 conformance files for consumers in other languages, and adds the MIT LICENSE
 file that `pyproject.toml` already declared. `SCHEMA_VERSION` stays 4 and the
 signing payload stays version 4: no stored record needs migrating, and every
@@ -8,6 +9,15 @@ existing signature still verifies.
 
 ## What changed
 
+- **`normative` shape** (`SHAPES["normative"]`). For statutes, regulations,
+  court rules, and holdings that state rules. Expected roles: `legislature`,
+  `agency`, `court`, and `system`. The asserter is the enacting or issuing
+  authority; the validator is a court or an automated verifier (for example
+  lexplicit's verification loop, as `system`). A norm's bearer and
+  counterparty are part of the encoded rule, not the ledger's actor slots, so
+  the shape adds no roles for them.
+- **`ActorRole.LEGISLATURE` (`"legislature"`) and `ActorRole.AGENCY`
+  (`"agency"`)** (new values).
 - **`reject` action.** `proposition → demoted` is now legal, and only through
   `reject`. Use it when automated verification or a reviewer rejects a
   proposition before it was ever promoted. A rejected proposition sits in
@@ -41,6 +51,14 @@ existing signature still verifies.
 - **LICENSE.** The MIT license text is now in the repository and the wheel.
 
 ## Compatibility
+
+- **Why `SCHEMA_VERSION` stays 4.** The rationale asks for a schema version and
+  migration "where stored meaning changes". Every v4 record stays valid and
+  means the same thing: the new shape, roles, and actions only add values. A
+  v4→v5 step would have nothing to rewrite.
+- Readers on v0.4.0 cannot parse a proposition with `shape="normative"` (the
+  record validator refuses unregistered shapes) or a `legislature` or `agency`
+  role. Upgrade readers first, as for the new actions.
 
 - Readers on v0.4.0 cannot parse a record whose history contains `reject` or
   `override`: the enum value is unknown to them. Upgrade every reader before a

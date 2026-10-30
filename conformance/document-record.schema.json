@@ -63,7 +63,9 @@
         "both_parties",
         "court",
         "secondary_source",
-        "system"
+        "system",
+        "legislature",
+        "agency"
       ],
       "title": "ActorRole",
       "type": "string"

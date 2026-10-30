@@ -26,6 +26,11 @@ open_position = Proposition(
 folio_iri = WORKING_TAXONOMY[open_position.proposition_type]
 ```
 
+`SHAPES` names the ledger configurations: `litigation`, `disputatio`, and
+`normative` (statutes, regulations, court rules, and rule-stating holdings,
+asserted by a `legislature`, `agency`, or `court` and validated by a court or
+an automated `system` verifier).
+
 `WORKING_TAXONOMY` maps canonical labels to optional FOLIO IRIs. Library-local
 working types remain valid entries with a `None` IRI until FOLIO gains an exact
 class for them.
