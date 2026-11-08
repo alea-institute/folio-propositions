@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Run from the repository root after creating an isolated pip-audit environment.
 set -euo pipefail
 
 audited_python=${1:?usage: audit-dependencies.sh PYTHON REPORT_PREFIX PIP_AUDIT}
@@ -9,8 +8,6 @@ mkdir -p "$(dirname "$report_prefix")"
 uv pip check --python "$audited_python"
 uv pip freeze --python "$audited_python" > "$report_prefix.freeze"
 
-# Only the checkout and its exact versioned wheel may be excluded. Reject all
-# other non-registry requirements before any package identifiers leave the host.
 "$audited_python" -I - "$report_prefix" <<'PY'
 import re
 import sys
@@ -40,7 +37,6 @@ timeout 120 "$auditor" --requirement "$report_prefix.requirements.txt" \
   --vulnerability-service pypi --no-deps --disable-pip --strict \
   --timeout 15 --progress-spinner off --format json --output "$report_prefix.json"
 
-# A successful process must also account for every pin, without skipped entries.
 "$audited_python" -I - "$report_prefix" <<'PY'
 import json
 import re
