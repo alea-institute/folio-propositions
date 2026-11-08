@@ -44,12 +44,22 @@ A fresh Python 3.11 build environment installed the declared Hatchling requireme
 
 `python -I tests/core_smoke.py`: **six tests passed**. The script proved installation beneath the new environment's site-packages, wheel provenance, `py.typed`, absent `cryptography`, JSON round trips, migration and identity stamping without input mutation, accepting/rejecting verifier behavior, and ordered verification of every signed history entry. The synthetic verifier tests the protocol; real Ed25519 tests remain in pytest.
 
-Running the smoke in the signing-enabled development environment failed as intended because `cryptography` was present. The audited wheel identifier and SHA-256 are in the audit receipt. No wheel was published or committed.
+Running the smoke in the signing-enabled development environment failed as intended because `cryptography` was present. A separate core-only editable installation also failed the provenance test while passing the five consumer-operation tests. The audited wheel identifier and SHA-256 are in the audit receipt. No wheel was published or committed.
 
 ## Workflow and documentation
 
 The workflow parses as YAML and keeps its Python 3.11–3.13 matrix, full pytest/Ruff/mypy checks, read-only contents permission, PR concurrency cancellation, original triggers and bounded job timeouts. All embedded shell steps and `scripts/audit-dependencies.sh` pass `bash -n`; there is no `continue-on-error`. The coverage leg collects the full suite. Core-wheel build and both backend/core audits run independently from development environments. Exact inventories, complete reports and successful exit codes are required by the audit gate.
 
+A real pip-audit negative control queried one synthetic nonexistent package with the same strict, no-resolver options. Collection failed with exit **1**, confirming that unavailable advisory evidence cannot report success. This package was a failure probe, not an application dependency.
+
 The README's development, coverage, wheel-build and audit command sequences were exercised with disposable environment names. Current documentation distinguishes structural validation, signature verification and consumer authorization, and no longer implies model immutability. Documentation links and named public exports were checked against the checkout. `git diff --check` passed.
 
 This library has no frontend change, so a Playwright screenshot is inapplicable. Hosted Actions execution and the campaign's Astra/Fable PR reviews remain controller-owned; local checks do not claim to replace them. No schema migration, data rewrite, release, outside service integration or user decision was introduced.
+
+## Local review and delivery
+
+The LFG simplification pass used five separate reviews for reuse, quality, efficiency, test value and comments. It retained all logic and proof tests and removed four redundant prose-comment lines from the audit script. The 15 audit-gate tests, Ruff and mypy passed after that cleanup.
+
+The subsequent `ce-code-review` checked the complete diff from `90f94be`, including the cleanup, against the explicit plan. Its scope helper counted 69 executable non-test changed lines and no full-review floor; the skill selected its in-context correctness review. All seven requirements and five implementation units were covered, with no actionable findings or unresolved local test gaps. This local review does not replace the campaign's required PR reviews.
+
+All deliverables are committed on `drawdown/foli-3`. No remote is configured; no push, PR creation or hosted CI watch was attempted. The controller owns publication and the remaining campaign gates.
