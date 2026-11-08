@@ -23,7 +23,7 @@ classifiers = [
 
 [project.optional-dependencies]
 signing = ["cryptography>=46"]
-dev = ["pytest>=8.0", "mypy>=1.10", "ruff>=0.6", "cryptography>=46"]
+dev = ["pytest>=8.0", "mypy>=1.10", "ruff>=0.6", "cryptography>=46", "coverage>=7.6"]
 
 [project.urls]
 Homepage = "https://github.com/alea-institute/folio-propositions"
@@ -34,3 +34,13 @@ packages = ["src/folio_propositions"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+
+[tool.coverage.run]
+branch = true
+source = ["src/folio_propositions"]
+relative_files = true
+
+[tool.coverage.report]
+show_missing = true
+precision = 2
+fail_under = 97

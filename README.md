@@ -43,13 +43,19 @@ URI when a document has none.
 
 ## Axiom lifecycle
 
-`axiom_status` changes only through `apply_transition`, which checks the legal
+Use `apply_transition` to advance `axiom_status`: it checks the legal
 transition table (`proposition → promoted ⇄ demoted`, any of them →
 `superseded`, which is terminal) and verifies the actor's signature. Every
-change is appended to `axiom_history` with its sequence number, and the
+accepted change is appended to the returned copy's `axiom_history` with its sequence number, and the
 signature binds the proposition id, its stamped `content_iri` and that sequence.
 A `did:key` signature is self-certifying, so check `actor_did` against your own
-authorized signers. Install
+authorized signers. Models are mutable; direct assignment and `model_copy(update=...)`
+can bypass validation. Constructing a `Proposition` checks history structure,
+but does not verify signatures. Call `verify_history` on a validated incoming
+proposition to check every recorded signature with your verifier; `apply_transition`
+checks only the new entry. Neither operation supplies your authorization policy.
+Unsigned legacy `migrate` entries are rejected by `verify_history` unless you
+explicitly opt in to trusting them. Install
 `folio-propositions[signing]` for the `did:key` Ed25519 verifier and the
 `sign_transition` helper. See the [v0.4.0 migration notes](docs/migration-0.4.0.md).
 
@@ -58,17 +64,62 @@ authorized signers. Install
 From the repository root, install and run the same checks as CI:
 
 ```bash
-uv venv .venv
+uv venv --python 3.11 .venv
 uv pip install --python .venv/bin/python -e '.[dev,signing]'
 .venv/bin/pytest -q
 .venv/bin/ruff check .
 .venv/bin/mypy src
+.venv/bin/coverage run -m pytest -q
+.venv/bin/coverage report
 ```
 
-CI runs these checks on Python 3.11, 3.12, and 3.13. A separate job installs
-only the core package and verifies its isolated import without `cryptography`.
+CI runs the full pytest, Ruff and mypy suites on Python 3.11, 3.12, and 3.13.
+The 3.11 leg measures every package module's statements and branches and enforces
+a 97% combined coverage floor. Run the commands from the repository root.
 The test suite uses fixed ontology IRIs and content-identity golden vectors;
 it does not fetch an ontology or require sibling repositories.
+
+To reproduce the separate wheel check, create fresh build and core environments:
+
+```bash
+mkdir -p .audit
+uv venv --python 3.11 .venv-build
+.venv-build/bin/python -I -c 'import tomllib; print("\n".join(tomllib.load(open("pyproject.toml", "rb"))["build-system"]["requires"]))' > .audit/build-requirements.txt
+uv pip install --python .venv-build/bin/python -r .audit/build-requirements.txt
+uv pip freeze --python .venv-build/bin/python > .audit/build-before.freeze
+uv build --python .venv-build/bin/python --wheel --no-build-isolation
+uv pip freeze --python .venv-build/bin/python > .audit/build-after.freeze
+cmp .audit/build-before.freeze .audit/build-after.freeze
+sha256sum dist/*.whl
+uv venv --python 3.11 .venv-core
+uv pip install --python .venv-core/bin/python dist/*.whl
+.venv-core/bin/python -I tests/core_smoke.py
+```
+
+The smoke script requires a non-editable wheel installation, its typing marker,
+and no `cryptography`. It checks serialization, migration, identity stamping and
+the custom-verifier protocol. Its recording verifier is synthetic; the signing
+suite separately exercises real Ed25519 signatures.
+
+Audit the exact installed dependencies with an isolated auditor (Bash and GNU
+`timeout` are required, as on CI's Ubuntu runners):
+
+```bash
+uv venv --python 3.11 .venv-audit
+uv pip install --python .venv-audit/bin/python pip-audit
+for environment in .venv .venv-build .venv-core; do
+  bash scripts/audit-dependencies.sh "$environment/bin/python" ".audit/$environment" .venv-audit/bin/pip-audit || exit "$?"
+done
+```
+
+CI also audits each development matrix environment. The script exports exact
+transitive pins and excludes only this checkout's local package or its versioned
+wheel. Unexpected URLs/editables, vulnerabilities, skipped packages, incomplete
+reports and service failures fail the check. Only validated third-party pins go
+to PyPI's advisory service; local freeze files stay in the ignored `.audit/`
+directory. Audits cover the tested resolutions at the time of the scan, not every
+version permitted by dependency ranges. See the dated [verification](docs/plans/evidence/foli-3-verification.md)
+and [dependency/source audit](docs/plans/evidence/foli-3-audit.md) receipts.
 
 ## Docs
 
