@@ -93,6 +93,26 @@ default rejection of the unsigned legacy opener, explicit caller trust, and
 authorization/signature checks on the signed legacy suffix. They use real,
 ephemeral signatures and no persistent keys or stored records.
 
+## Review outcome
+
+Review run `20261111-023118-cf23c18e` covered the complete restored diff and
+fresh receipt at `b987210948939a5b72ca5b92cec5db89193aa15d`, against the frozen
+build starting tip. Correctness, testing, maintainability, security,
+reliability, and adversarial reviewers returned no findings, residual risks,
+or testing gaps. The requirements check confirmed every plan requirement and
+implementation unit. No review fix was needed.
+
+The prior simplification pass reviewed reuse, quality, efficiency, test value,
+and comments. It found no worthwhile change; the two walkthroughs and their
+consumer trust-boundary explanations remain intact. All proof tests remain
+unchanged. Both passes used local Astra reviewers.
+
+The checkout disables external cross-model review, so the local adversarial
+reviewer covered that concern. The review reused the fresh verification above;
+it did not claim another matrix run. Only evidence prose changed after the
+checked code commit. The local verdict is ready for controller publication,
+subject to the campaign gates below.
+
 ## Controller follow-through
 
 The chief campaign plan and common mandate file are unavailable in this
