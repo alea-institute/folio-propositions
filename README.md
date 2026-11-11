@@ -89,9 +89,15 @@ all three, and the test suite fails if they drift from the implementation. See
 
 ## Development checks
 
-From the repository root, install and run the same checks as CI:
+After committing the changes you want to verify, start from the repository root
+and make a fresh copy of the committed tree. Keep all following commands in that
+copy so the development install, wheel build, and dependency audits share the
+same root. This preserves existing environments and build artifacts:
 
 ```bash
+verification_root=$(mktemp -d)
+git archive HEAD | tar -x -C "$verification_root"
+cd "$verification_root"
 uv venv --python 3.11 .venv
 uv pip install --python .venv/bin/python -e '.[dev,signing]'
 .venv/bin/pytest -q
@@ -108,7 +114,8 @@ a 97% combined coverage floor. Run the commands from the repository root.
 The test suite uses fixed ontology IRIs and content-identity golden vectors;
 it does not fetch an ontology or require sibling repositories.
 
-To reproduce the separate wheel check, create fresh build and core environments:
+To reproduce the separate wheel check, stay in the verification copy (whose
+`dist/` starts empty) and create fresh build and core environments:
 
 ```bash
 mkdir -p .audit
@@ -119,9 +126,11 @@ uv pip freeze --python .venv-build/bin/python > .audit/build-before.freeze
 uv build --python .venv-build/bin/python --wheel --no-build-isolation
 uv pip freeze --python .venv-build/bin/python > .audit/build-after.freeze
 cmp .audit/build-before.freeze .audit/build-after.freeze
-sha256sum dist/*.whl
+version=$(.venv-build/bin/python -I -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
+wheel="dist/folio_propositions-$version-py3-none-any.whl"
+sha256sum "$wheel"
 uv venv --python 3.11 .venv-core
-uv pip install --python .venv-core/bin/python dist/*.whl
+uv pip install --python .venv-core/bin/python "$wheel"
 .venv-core/bin/python -I tests/core_smoke.py
 ```
 
@@ -147,8 +156,11 @@ wheel. Unexpected URLs/editables, vulnerabilities, skipped packages, incomplete
 reports and service failures fail the check. Only validated third-party pins go
 to PyPI's advisory service; local freeze files stay in the ignored `.audit/`
 directory. Audits cover the tested resolutions at the time of the scan, not every
-version permitted by dependency ranges. See the dated [verification](docs/plans/evidence/foli-3-verification.md)
-and [dependency/source audit](docs/plans/evidence/foli-3-audit.md) receipts.
+version permitted by dependency ranges. See the current
+[maintenance landing verification](docs/plans/evidence/2026-11-11-foli-8-verification.md).
+The earlier [verification](docs/plans/evidence/foli-3-verification.md)
+and [dependency/source audit](docs/plans/evidence/foli-3-audit.md) receipts record
+the source PR's historical checks, not fresh evidence for this tree.
 
 ## Docs
 
