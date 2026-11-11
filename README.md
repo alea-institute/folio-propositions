@@ -97,6 +97,7 @@ same root. This preserves existing environments and build artifacts:
 ```bash
 verification_root=$(mktemp -d)
 git archive HEAD | tar -x -C "$verification_root"
+git -C "$verification_root" init --quiet
 cd "$verification_root"
 uv venv --python 3.11 .venv
 uv pip install --python .venv/bin/python -e '.[dev,signing]'
@@ -109,6 +110,7 @@ uv pip install --python .venv/bin/python -e '.[dev,signing]'
 ```
 
 CI runs the full pytest, Ruff and mypy suites on Python 3.11, 3.12, and 3.13.
+The temporary Git repository lets Ruff honor the copied `.gitignore` rules.
 The 3.11 leg measures every package module's statements and branches and enforces
 a 97% combined coverage floor. Run the commands from the repository root.
 The test suite uses fixed ontology IRIs and content-identity golden vectors;
