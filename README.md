@@ -65,6 +65,9 @@ authorized signers. Install
 `folio-propositions[signing]` for the `did:key` Ed25519 verifier and the
 `sign_transition` helper. See the [v0.5.0](docs/migration-0.5.0.md) and
 [v0.4.0](docs/migration-0.4.0.md) migration notes.
+For a runnable walkthrough of caller-owned signer policy, saved-history replay,
+and explicit legacy trust, see the
+[consumer migration examples](docs/migration-0.4.0.md#run-the-consumer-examples).
 
 ## Conformance files for other languages
 
