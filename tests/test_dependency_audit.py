@@ -4,11 +4,14 @@ import json
 import os
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
+WHEEL = f"folio_propositions-{VERSION}-py3-none-any.whl"
 CLEAN = {"dependencies": [{"name": "pydantic", "version": "2.14.1", "vulns": []}]}
 
 
@@ -55,7 +58,7 @@ def audit_gate(tmp_path, monkeypatch):
     "local",
     [
         f"-e {ROOT.as_uri()}\n",
-        f"folio-propositions @ {ROOT.as_uri()}/dist/folio_propositions-0.4.0-py3-none-any.whl\n",
+        f"folio-propositions @ {ROOT.as_uri()}/dist/{WHEEL}\n",
         "",
     ],
 )
@@ -73,6 +76,8 @@ def test_audit_accepts_complete_pins_and_only_known_local_origins(audit_gate, lo
         "pydantic @ https://example.com/private.whl\n",
         "pydantic>=2\n",
         "folio-propositions==0.4.0\n",
+        f"folio-propositions @ {ROOT.as_uri()}/dist/folio_propositions-0.4.0-py3-none-any.whl\n",
+        f"folio-propositions @ {ROOT.as_uri()}/{WHEEL}\n",
         "",
     ],
 )
