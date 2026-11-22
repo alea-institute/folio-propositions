@@ -180,8 +180,9 @@ reports and service failures fail the check. Only validated third-party pins go
 to PyPI's advisory service; local freeze files stay in the ignored `.audit/`
 directory. Audits cover the tested resolutions at the time of the scan, not every
 version permitted by dependency ranges. See the current
-[maintenance landing verification](docs/plans/evidence/2026-11-11-foli-8-verification.md).
-The earlier [verification](docs/plans/evidence/foli-3-verification.md)
+[additive CI verification](docs/plans/evidence/2026-11-21-foli-9-verification.md).
+The earlier [maintenance landing](docs/plans/evidence/2026-11-11-foli-8-verification.md),
+[verification](docs/plans/evidence/foli-3-verification.md)
 and [dependency/source audit](docs/plans/evidence/foli-3-audit.md) receipts record
 the source PR's historical checks, not fresh evidence for this tree.
 
