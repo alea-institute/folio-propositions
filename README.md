@@ -90,11 +90,12 @@ all three, and the test suite fails if they drift from the implementation. See
 ## Development checks
 
 After committing the changes you want to verify, start from the repository root
-and make a fresh copy of the committed tree. Keep all following commands in that
-copy so the development install, wheel build, and dependency audits share the
-same root. This preserves existing environments and build artifacts:
+and make a fresh copy of the committed tree for the development checks. Use a
+separate copy for the core checks below, just as CI uses separate jobs. This
+preserves existing environments and build artifacts:
 
 ```bash
+source_repo=$PWD
 verification_root=$(mktemp -d)
 git archive HEAD | tar -x -C "$verification_root"
 git -C "$verification_root" init --quiet
@@ -111,15 +112,35 @@ uv pip install --python .venv/bin/python -e '.[dev,signing]'
 
 CI runs the full pytest, Ruff and mypy suites on Python 3.11, 3.12, and 3.13.
 The temporary Git repository lets Ruff honor the copied `.gitignore` rules.
-The 3.11 leg measures every package module's statements and branches and enforces
-a 97% combined coverage floor. Run the commands from the repository root.
+The 3.11 leg also measures every package module's statements and branches and
+enforces a 97% combined coverage floor. Run the commands from each copy's root.
 The test suite uses fixed ontology IRIs and content-identity golden vectors;
 it does not fetch an ontology or require sibling repositories.
 
-To reproduce the separate wheel check, stay in the verification copy (whose
-`dist/` starts empty) and create fresh build and core environments:
+Audit the development environment from this same copy with an isolated auditor
+(Bash and GNU `timeout` are required, as on CI's Ubuntu runners):
 
 ```bash
+uv venv --python 3.11 .venv-audit
+uv pip install --python .venv-audit/bin/python pip-audit
+bash scripts/audit-dependencies.sh .venv/bin/python .audit/dev .venv-audit/bin/pip-audit
+```
+
+To reproduce the separate core job, return to the source repository and create
+another fresh copy. Its `.venv` must contain only core dependencies; reusing the
+development environment would invalidate the no-signing-dependencies check.
+First verify the editable core import, then build and check the installed wheel
+in separate environments. The new copy's `dist/` starts empty:
+
+```bash
+cd "$source_repo"
+core_verification_root=$(mktemp -d)
+git archive HEAD | tar -x -C "$core_verification_root"
+git -C "$core_verification_root" init --quiet
+cd "$core_verification_root"
+uv venv --python 3.11 .venv
+uv pip install --python .venv/bin/python -e .
+.venv/bin/python -I -c "import importlib.util; assert importlib.util.find_spec('cryptography') is None; import folio_propositions"
 mkdir -p .audit
 uv venv --python 3.11 .venv-build
 .venv-build/bin/python -I -c 'import tomllib; print("\n".join(tomllib.load(open("pyproject.toml", "rb"))["build-system"]["requires"]))' > .audit/build-requirements.txt
@@ -141,13 +162,13 @@ and no `cryptography`. It checks serialization, migration, identity stamping and
 the custom-verifier protocol. Its recording verifier is synthetic; the signing
 suite separately exercises real Ed25519 signatures.
 
-Audit the exact installed dependencies with an isolated auditor (Bash and GNU
-`timeout` are required, as on CI's Ubuntu runners):
+Stay in the core copy and audit its exact backend and wheel dependencies with
+another isolated auditor:
 
 ```bash
 uv venv --python 3.11 .venv-audit
 uv pip install --python .venv-audit/bin/python pip-audit
-for environment in .venv .venv-build .venv-core; do
+for environment in .venv-build .venv-core; do
   bash scripts/audit-dependencies.sh "$environment/bin/python" ".audit/$environment" .venv-audit/bin/pip-audit || exit "$?"
 done
 ```

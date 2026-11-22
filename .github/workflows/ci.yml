@@ -32,7 +32,6 @@ jobs:
           uv pip install --python .venv/bin/python -e '.[dev,signing]'
           echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
       - name: Test
-        if: matrix.python-version != '3.11'
         run: pytest -q
       - name: Test with branch coverage
         if: matrix.python-version == '3.11'
@@ -50,7 +49,7 @@ jobs:
           bash scripts/audit-dependencies.sh .venv/bin/python .audit/dev .venv-audit/bin/pip-audit
 
   core-import:
-    name: Core wheel without signing dependencies
+    name: Core import without signing dependencies
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -58,6 +57,14 @@ jobs:
       - uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
           python-version: '3.11'
+      - name: Install core dependencies only
+        run: |
+          uv venv .venv
+          uv pip install --python .venv/bin/python -e .
+          echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
+      - name: Verify isolated core import
+        run: |
+          python -I -c "import importlib.util; assert importlib.util.find_spec('cryptography') is None; import folio_propositions"
       - name: Build wheel with an inventoried backend
         run: |
           mkdir -p .audit
