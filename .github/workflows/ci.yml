@@ -33,10 +33,20 @@ jobs:
           echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
       - name: Test
         run: pytest -q
+      - name: Test with branch coverage
+        if: matrix.python-version == '3.11'
+        run: |
+          coverage run -m pytest -q
+          coverage report
       - name: Lint
         run: ruff check .
       - name: Type check
         run: mypy src
+      - name: Audit exact development and signing dependencies
+        run: |
+          uv venv .venv-audit
+          uv pip install --python .venv-audit/bin/python pip-audit
+          bash scripts/audit-dependencies.sh .venv/bin/python .audit/dev .venv-audit/bin/pip-audit
 
   core-import:
     name: Core import without signing dependencies
@@ -55,3 +65,25 @@ jobs:
       - name: Verify isolated core import
         run: |
           python -I -c "import importlib.util; assert importlib.util.find_spec('cryptography') is None; import folio_propositions"
+      - name: Build wheel with an inventoried backend
+        run: |
+          mkdir -p .audit
+          uv venv .venv-build
+          .venv-build/bin/python -I -c 'import tomllib; print("\n".join(tomllib.load(open("pyproject.toml", "rb"))["build-system"]["requires"]))' > .audit/build-requirements.txt
+          uv pip install --python .venv-build/bin/python -r .audit/build-requirements.txt
+          uv pip freeze --python .venv-build/bin/python > .audit/build-before.freeze
+          uv build --python .venv-build/bin/python --wheel --no-build-isolation
+          uv pip freeze --python .venv-build/bin/python > .audit/build-after.freeze
+          cmp .audit/build-before.freeze .audit/build-after.freeze
+          sha256sum dist/*.whl
+      - name: Verify installed core wheel
+        run: |
+          uv venv .venv-core
+          uv pip install --python .venv-core/bin/python dist/*.whl
+          .venv-core/bin/python -I tests/core_smoke.py
+      - name: Audit exact backend and core dependencies
+        run: |
+          uv venv .venv-audit
+          uv pip install --python .venv-audit/bin/python pip-audit
+          bash scripts/audit-dependencies.sh .venv-build/bin/python .audit/build .venv-audit/bin/pip-audit
+          bash scripts/audit-dependencies.sh .venv-core/bin/python .audit/core .venv-audit/bin/pip-audit
